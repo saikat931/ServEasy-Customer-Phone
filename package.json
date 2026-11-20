@@ -9,7 +9,7 @@
     "lint": "eslint .",
     "start": "expo start",
     "test": "jest",
-    "deploy": "git add . && git commit -m \"Auto update\" && git push origin main && npx eas-cli update --branch preview --message \"Auto update\""
+    "deploy": "git add . && git commit -m \"Auto update\" && git push origin main && npx eas-cli update --branch preview --environment preview --message \"Auto update\""
   },
   "dependencies": {
     "@expo/vector-icons": "^15.0.2",

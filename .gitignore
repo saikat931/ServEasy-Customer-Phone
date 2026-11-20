@@ -77,5 +77,6 @@ yarn-error.log
 # Expo & Generated Native Directories
 .expo/
 .bundle/
+dist/
 android/
 ios/

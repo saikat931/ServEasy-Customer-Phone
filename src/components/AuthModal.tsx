@@ -8,14 +8,12 @@ import {
   Modal,
   Image,
   ActivityIndicator,
-  Alert,
-  KeyboardAvoidingView,
-  ScrollView,
-  Platform
+  Platform,
+  Keyboard,
 } from 'react-native';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { GlassCard } from './GlassCard';
-import { sendOtpApi, verifyOtpApi, fetchOtpConfigApi, API_BASE_URL } from '../services/api';
+import { sendOtpApi, verifyOtpApi, fetchOtpConfigApi } from '../services/api';
 
 interface AuthModalProps {
   visible: boolean;
@@ -32,6 +30,7 @@ export function AuthModal({ visible, onClose, theme, activeTheme, onLoginSuccess
   const [loading, setLoading] = useState(false);
   const [devOtp, setDevOtp] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [keyboardVisible, setKeyboardVisible] = useState(false);
 
   const [otpConfig, setOtpConfig] = useState<{ mode: string; label: string; placeholder: string }>({
     mode: 'both',
@@ -60,6 +59,17 @@ export function AuthModal({ visible, onClose, theme, activeTheme, onLoginSuccess
       loadOtpConfig();
     }
   }, [visible]);
+
+  useEffect(() => {
+    const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+    const showSub = Keyboard.addListener(showEvent, () => setKeyboardVisible(true));
+    const hideSub = Keyboard.addListener(hideEvent, () => setKeyboardVisible(false));
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, []);
 
   const validateIdentity = () => {
     const val = identity.trim();
@@ -100,7 +110,6 @@ export function AuthModal({ visible, onClose, theme, activeTheme, onLoginSuccess
   const handleSendOtp = async () => {
     setErrorMessage(null);
     if (!validateIdentity()) {
-      // NOTE: validateIdentity sets the specific error message, do not overwrite here
       return;
     }
 
@@ -174,35 +183,40 @@ export function AuthModal({ visible, onClose, theme, activeTheme, onLoginSuccess
         onClose();
       }}
     >
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={styles.modalOverlay}
-      >
-        <ScrollView
-          contentContainerStyle={styles.scrollContent}
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
-          bounces={false}
+      <View style={[styles.modalOverlay, keyboardVisible && styles.modalOverlayWithKeyboard]}>
+        {/* Backdrop tap to dismiss keyboard */}
+        <TouchableOpacity
+          activeOpacity={1}
+          style={StyleSheet.absoluteFill}
+          onPress={Keyboard.dismiss}
+        />
+
+        <GlassCard
+          theme={theme}
+          style={[styles.modalCard, keyboardVisible && styles.modalCardCompact]}
+          intensity={activeTheme.glassIntensity + 15}
         >
-          <GlassCard theme={theme} style={styles.modalCard} intensity={activeTheme.glassIntensity + 15}>
-            {/* Close button */}
-            <TouchableOpacity
-              style={[styles.closeBtn, { backgroundColor: activeTheme.pillInactiveBg }]}
-              onPress={() => {
-                handleReset();
-                onClose();
-              }}
-            >
-              <MaterialCommunityIcons name="close" size={18} color={activeTheme.textPrimary} />
-            </TouchableOpacity>
+          {/* Close button */}
+          <TouchableOpacity
+            style={[styles.closeBtn, keyboardVisible && styles.closeBtnCompact, { backgroundColor: activeTheme.pillInactiveBg }]}
+            onPress={() => {
+              handleReset();
+              onClose();
+            }}
+          >
+            <MaterialCommunityIcons name="close" size={keyboardVisible ? 16 : 18} color={activeTheme.textPrimary} />
+          </TouchableOpacity>
 
           {/* Logo & Headline */}
-          <View style={styles.headerBox}>
-            <Image source={require('../../assets/logo.png')} style={styles.logoImage} />
-            <Text style={[styles.title, { color: activeTheme.textPrimary }]}>
+          <View style={[styles.headerBox, keyboardVisible && styles.headerBoxCompact]}>
+            <Image
+              source={require('../../assets/logo.png')}
+              style={[styles.logoImage, keyboardVisible && styles.logoImageCompact]}
+            />
+            <Text style={[styles.title, keyboardVisible && styles.titleCompact, { color: activeTheme.textPrimary }]}>
               {step === 'identity' ? 'Sign In / Register' : 'Verify Security Code'}
             </Text>
-            <Text style={[styles.subtitle, { color: activeTheme.textSecondary }]}>
+            <Text style={[styles.subtitle, keyboardVisible && styles.subtitleCompact, { color: activeTheme.textSecondary }]}>
               {step === 'identity'
                 ? 'Enter your phone number or email to receive a secure OTP code.'
                 : `We sent a 6-digit verification code to ${identity}`}
@@ -211,16 +225,16 @@ export function AuthModal({ visible, onClose, theme, activeTheme, onLoginSuccess
 
           {/* Error Banner (shown during OTP step) */}
           {errorMessage && step === 'otp' && (
-            <View style={styles.errorBox}>
-              <MaterialCommunityIcons name="alert-circle-outline" size={16} color="#FF3B30" style={{ marginRight: 6 }} />
+            <View style={[styles.errorBox, keyboardVisible && styles.errorBoxCompact]}>
+              <MaterialCommunityIcons name="alert-circle-outline" size={15} color="#FF3B30" style={{ marginRight: 6 }} />
               <Text style={styles.errorText}>{errorMessage}</Text>
             </View>
           )}
 
           {/* Login OTP Pill */}
           {devOtp && step === 'otp' && (
-            <View style={styles.devOtpBox}>
-              <MaterialCommunityIcons name="shield-check" size={16} color="#30D158" style={{ marginRight: 6 }} />
+            <View style={[styles.devOtpBox, keyboardVisible && styles.devOtpBoxCompact]}>
+              <MaterialCommunityIcons name="shield-check" size={15} color="#30D158" style={{ marginRight: 6 }} />
               <Text style={styles.devOtpText}>Login OTP Code: <Text style={{ fontWeight: '900' }}>{devOtp}</Text></Text>
             </View>
           )}
@@ -228,13 +242,23 @@ export function AuthModal({ visible, onClose, theme, activeTheme, onLoginSuccess
           {step === 'identity' ? (
             /* STEP 1: Phone / Email */
             <View style={styles.formContent}>
-              <Text style={[styles.inputLabel, { color: activeTheme.textSecondary }]}>
+              <Text style={[styles.inputLabel, keyboardVisible && styles.inputLabelCompact, { color: activeTheme.textSecondary }]}>
                 {otpConfig.label}
               </Text>
-              <View style={[styles.inputContainer, { backgroundColor: activeTheme.inputBg, borderColor: errorMessage ? '#e74c3c' : activeTheme.cardBorder, marginBottom: errorMessage ? 6 : 16 }]}>
+              <View
+                style={[
+                  styles.inputContainer,
+                  keyboardVisible && styles.inputContainerCompact,
+                  {
+                    backgroundColor: activeTheme.inputBg,
+                    borderColor: errorMessage ? '#e74c3c' : activeTheme.cardBorder,
+                    marginBottom: errorMessage ? 6 : (keyboardVisible ? 12 : 16),
+                  },
+                ]}
+              >
                 <MaterialCommunityIcons
                   name={otpConfig.mode === 'phone' ? 'phone' : (otpConfig.mode === 'email' ? 'email-outline' : 'account-circle-outline')}
-                  size={20}
+                  size={keyboardVisible ? 18 : 20}
                   color={errorMessage ? '#e74c3c' : activeTheme.iconColor}
                   style={{ marginRight: 10 }}
                 />
@@ -278,7 +302,12 @@ export function AuthModal({ visible, onClose, theme, activeTheme, onLoginSuccess
               ) : null}
 
               <TouchableOpacity
-                style={[styles.actionBtn, { backgroundColor: activeTheme.accentBtnBg }, loading && { opacity: 0.7 }]}
+                style={[
+                  styles.actionBtn,
+                  keyboardVisible && styles.actionBtnCompact,
+                  { backgroundColor: activeTheme.accentBtnBg },
+                  loading && { opacity: 0.7 },
+                ]}
                 onPress={handleSendOtp}
                 disabled={loading}
               >
@@ -295,11 +324,21 @@ export function AuthModal({ visible, onClose, theme, activeTheme, onLoginSuccess
           ) : (
             /* STEP 2: 6-Digit OTP */
             <View style={styles.formContent}>
-              <Text style={[styles.inputLabel, { color: activeTheme.textSecondary }]}>
+              <Text style={[styles.inputLabel, keyboardVisible && styles.inputLabelCompact, { color: activeTheme.textSecondary }]}>
                 ENTER 6-DIGIT VERIFICATION CODE
               </Text>
-              <View style={[styles.inputContainer, { backgroundColor: activeTheme.inputBg, borderColor: activeTheme.cardBorder }]}>
-                <MaterialCommunityIcons name="shield-key-outline" size={20} color={activeTheme.iconColor} style={{ marginRight: 10 }} />
+              <View
+                style={[
+                  styles.inputContainer,
+                  keyboardVisible && styles.inputContainerCompact,
+                  {
+                    backgroundColor: activeTheme.inputBg,
+                    borderColor: activeTheme.cardBorder,
+                    marginBottom: keyboardVisible ? 12 : 16,
+                  },
+                ]}
+              >
+                <MaterialCommunityIcons name="shield-key-outline" size={keyboardVisible ? 18 : 20} color={activeTheme.iconColor} style={{ marginRight: 10 }} />
                 <TextInput
                   style={[styles.textInput, { color: activeTheme.textPrimary, letterSpacing: 4, fontWeight: '800' }]}
                   placeholder="000000"
@@ -312,7 +351,12 @@ export function AuthModal({ visible, onClose, theme, activeTheme, onLoginSuccess
               </View>
 
               <TouchableOpacity
-                style={[styles.actionBtn, { backgroundColor: '#30D158' }, loading && { opacity: 0.7 }]}
+                style={[
+                  styles.actionBtn,
+                  keyboardVisible && styles.actionBtnCompact,
+                  { backgroundColor: '#30D158' },
+                  loading && { opacity: 0.7 },
+                ]}
                 onPress={handleVerifyOtp}
                 disabled={loading}
               >
@@ -326,7 +370,7 @@ export function AuthModal({ visible, onClose, theme, activeTheme, onLoginSuccess
                 )}
               </TouchableOpacity>
 
-              <View style={styles.otpFooterRow}>
+              <View style={[styles.otpFooterRow, keyboardVisible && { marginTop: 10 }]}>
                 <TouchableOpacity onPress={() => setStep('identity')}>
                   <Text style={[styles.changeIdentityText, { color: activeTheme.textSecondary }]}>
                     Change Phone / Email
@@ -341,7 +385,7 @@ export function AuthModal({ visible, onClose, theme, activeTheme, onLoginSuccess
               </View>
 
               {identity.includes('@') && (
-                <View style={styles.spamTipRow}>
+                <View style={[styles.spamTipRow, keyboardVisible && { marginTop: 8 }]}>
                   <MaterialCommunityIcons name="information-outline" size={13} color={activeTheme.textSecondary} style={{ marginRight: 4 }} />
                   <Text style={[styles.spamTipText, { color: activeTheme.textSecondary }]}>
                     Can't find the email? Check your Spam or Promotions folder.
@@ -351,8 +395,7 @@ export function AuthModal({ visible, onClose, theme, activeTheme, onLoginSuccess
             </View>
           )}
         </GlassCard>
-        </ScrollView>
-      </KeyboardAvoidingView>
+      </View>
     </Modal>
   );
 }
@@ -361,13 +404,13 @@ const styles = StyleSheet.create({
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.75)',
-  },
-  scrollContent: {
-    flexGrow: 1,
     justifyContent: 'center',
     alignItems: 'center',
     padding: 20,
-    minHeight: '100%',
+  },
+  modalOverlayWithKeyboard: {
+    justifyContent: 'flex-start',
+    paddingTop: Platform.OS === 'ios' ? 52 : 32,
   },
   modalCard: {
     width: '100%',
@@ -376,6 +419,11 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     padding: 22,
     position: 'relative',
+  },
+  modalCardCompact: {
+    padding: 16,
+    paddingTop: 14,
+    borderRadius: 18,
   },
   closeBtn: {
     position: 'absolute',
@@ -388,10 +436,21 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     zIndex: 10,
   },
+  closeBtnCompact: {
+    top: 12,
+    right: 12,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+  },
   headerBox: {
     alignItems: 'center',
     marginBottom: 18,
     marginTop: 6,
+  },
+  headerBoxCompact: {
+    marginBottom: 8,
+    marginTop: 0,
   },
   logoImage: {
     width: 120,
@@ -399,17 +458,30 @@ const styles = StyleSheet.create({
     resizeMode: 'contain',
     marginBottom: 10,
   },
+  logoImageCompact: {
+    width: 90,
+    height: 24,
+    marginBottom: 4,
+  },
   title: {
     fontSize: 19,
     fontWeight: '800',
     marginBottom: 4,
     textAlign: 'center',
   },
+  titleCompact: {
+    fontSize: 16,
+    marginBottom: 2,
+  },
   subtitle: {
     fontSize: 12,
     lineHeight: 16,
     textAlign: 'center',
     paddingHorizontal: 8,
+  },
+  subtitleCompact: {
+    fontSize: 11,
+    lineHeight: 14,
   },
   errorBox: {
     flexDirection: 'row',
@@ -420,6 +492,10 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     padding: 10,
     marginBottom: 14,
+  },
+  errorBoxCompact: {
+    padding: 7,
+    marginBottom: 8,
   },
   errorText: {
     color: '#FF3B30',
@@ -437,6 +513,10 @@ const styles = StyleSheet.create({
     padding: 10,
     marginBottom: 14,
   },
+  devOtpBoxCompact: {
+    padding: 7,
+    marginBottom: 8,
+  },
   devOtpText: {
     color: '#30D158',
     fontSize: 12,
@@ -451,6 +531,9 @@ const styles = StyleSheet.create({
     letterSpacing: 0.8,
     marginBottom: 8,
   },
+  inputLabelCompact: {
+    marginBottom: 4,
+  },
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -459,6 +542,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     height: 48,
     marginBottom: 16,
+  },
+  inputContainerCompact: {
+    height: 44,
+    marginBottom: 12,
   },
   textInput: {
     flex: 1,
@@ -470,7 +557,7 @@ const styles = StyleSheet.create({
     color: '#e74c3c',
     fontSize: 12,
     fontWeight: '500',
-    marginBottom: 12,
+    marginBottom: 10,
     paddingLeft: 4,
   },
   actionBtn: {
@@ -479,6 +566,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     height: 48,
     borderRadius: 12,
+  },
+  actionBtnCompact: {
+    height: 44,
   },
   actionBtnText: {
     color: '#FFFFFF',

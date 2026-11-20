@@ -196,8 +196,8 @@ export function AuthModal({ visible, onClose, theme, activeTheme, onLoginSuccess
         style={[
           styles.modalOverlay,
           keyboardVisible && styles.modalOverlayWithKeyboard,
-          keyboardVisible && {
-            paddingBottom: (keyboardHeight > 0 ? keyboardHeight : (Platform.OS === 'android' ? 290 : 320)) + 30,
+          keyboardVisible && Platform.OS === 'ios' && {
+            paddingBottom: (keyboardHeight > 0 ? keyboardHeight : 320) + 30,
           },
         ]}
       >
@@ -427,6 +427,7 @@ const styles = StyleSheet.create({
   },
   modalOverlayWithKeyboard: {
     justifyContent: 'flex-end',
+    paddingBottom: 30,
     paddingTop: 10,
   },
   modalCard: {

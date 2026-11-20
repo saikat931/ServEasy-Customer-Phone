@@ -10,6 +10,7 @@ import {
   ActivityIndicator,
   Alert,
   KeyboardAvoidingView,
+  ScrollView,
   Platform
 } from 'react-native';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
@@ -174,20 +175,26 @@ export function AuthModal({ visible, onClose, theme, activeTheme, onLoginSuccess
       }}
     >
       <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.modalOverlay}
       >
-        <GlassCard theme={theme} style={styles.modalCard} intensity={activeTheme.glassIntensity + 15}>
-          {/* Close button */}
-          <TouchableOpacity
-            style={[styles.closeBtn, { backgroundColor: activeTheme.pillInactiveBg }]}
-            onPress={() => {
-              handleReset();
-              onClose();
-            }}
-          >
-            <MaterialCommunityIcons name="close" size={18} color={activeTheme.textPrimary} />
-          </TouchableOpacity>
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+          bounces={false}
+        >
+          <GlassCard theme={theme} style={styles.modalCard} intensity={activeTheme.glassIntensity + 15}>
+            {/* Close button */}
+            <TouchableOpacity
+              style={[styles.closeBtn, { backgroundColor: activeTheme.pillInactiveBg }]}
+              onPress={() => {
+                handleReset();
+                onClose();
+              }}
+            >
+              <MaterialCommunityIcons name="close" size={18} color={activeTheme.textPrimary} />
+            </TouchableOpacity>
 
           {/* Logo & Headline */}
           <View style={styles.headerBox}>
@@ -344,6 +351,7 @@ export function AuthModal({ visible, onClose, theme, activeTheme, onLoginSuccess
             </View>
           )}
         </GlassCard>
+        </ScrollView>
       </KeyboardAvoidingView>
     </Modal>
   );
@@ -353,9 +361,13 @@ const styles = StyleSheet.create({
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.75)',
+  },
+  scrollContent: {
+    flexGrow: 1,
     justifyContent: 'center',
     alignItems: 'center',
     padding: 20,
+    minHeight: '100%',
   },
   modalCard: {
     width: '100%',

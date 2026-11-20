@@ -1,0 +1,57 @@
+{
+  "expo": {
+    "name": "ServEasy",
+    "slug": "customer-app",
+    "version": "1.0.1",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.serveasy.customer"
+    },
+    "android": {
+      "package": "com.serveasy.customer",
+      "versionCode": 2,
+      "adaptiveIcon": {
+        "backgroundColor": "#ffffff"
+      },
+      "permissions": [
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_FINE_LOCATION"
+      ]
+    },
+    "updates": {
+      "url": "https://u.expo.dev/f8663a44-0e11-488b-a7f1-b7e5a502e95d"
+    },
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "plugins": [
+      "expo-font",
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "Allow ServEasy to use your location to pin exact doorstep service addresses."
+        }
+      ],
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "usesCleartextTraffic": true
+          }
+        }
+      ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "f8663a44-0e11-488b-a7f1-b7e5a502e95d"
+      }
+    }
+  }
+}

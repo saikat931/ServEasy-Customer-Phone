@@ -22,7 +22,7 @@
       "versionCode": 2,
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#ffffff"
+        "backgroundColor": "#d8ebfa"
       },
       "permissions": [
         "ACCESS_FINE_LOCATION",

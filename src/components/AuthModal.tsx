@@ -31,6 +31,7 @@ export function AuthModal({ visible, onClose, theme, activeTheme, onLoginSuccess
   const [devOtp, setDevOtp] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [keyboardVisible, setKeyboardVisible] = useState(false);
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
 
   const [otpConfig, setOtpConfig] = useState<{ mode: string; label: string; placeholder: string }>({
     mode: 'both',
@@ -63,8 +64,16 @@ export function AuthModal({ visible, onClose, theme, activeTheme, onLoginSuccess
   useEffect(() => {
     const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
     const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
-    const showSub = Keyboard.addListener(showEvent, () => setKeyboardVisible(true));
-    const hideSub = Keyboard.addListener(hideEvent, () => setKeyboardVisible(false));
+    const showSub = Keyboard.addListener(showEvent, (e) => {
+      setKeyboardVisible(true);
+      if (e && e.endCoordinates && e.endCoordinates.height) {
+        setKeyboardHeight(e.endCoordinates.height);
+      }
+    });
+    const hideSub = Keyboard.addListener(hideEvent, () => {
+      setKeyboardVisible(false);
+      setKeyboardHeight(0);
+    });
     return () => {
       showSub.remove();
       hideSub.remove();
@@ -183,7 +192,13 @@ export function AuthModal({ visible, onClose, theme, activeTheme, onLoginSuccess
         onClose();
       }}
     >
-      <View style={[styles.modalOverlay, keyboardVisible && styles.modalOverlayWithKeyboard]}>
+      <View
+        style={[
+          styles.modalOverlay,
+          keyboardVisible && styles.modalOverlayWithKeyboard,
+          keyboardVisible && Platform.OS === 'ios' && { paddingBottom: keyboardHeight + 30 },
+        ]}
+      >
         {/* Backdrop tap to dismiss keyboard */}
         <TouchableOpacity
           activeOpacity={1}
@@ -409,8 +424,9 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   modalOverlayWithKeyboard: {
-    justifyContent: 'flex-start',
-    paddingTop: Platform.OS === 'ios' ? 52 : 32,
+    justifyContent: 'flex-end',
+    paddingBottom: 30,
+    paddingTop: 10,
   },
   modalCard: {
     width: '100%',

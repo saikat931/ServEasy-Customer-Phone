@@ -10,7 +10,7 @@ import {
   ActivityIndicator,
   Platform,
   Keyboard,
-  useWindowDimensions,
+  LayoutChangeEvent,
 } from 'react-native';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { GlassCard } from './GlassCard';
@@ -25,7 +25,6 @@ interface AuthModalProps {
 }
 
 export function AuthModal({ visible, onClose, theme, activeTheme, onLoginSuccess }: AuthModalProps) {
-  const { height: windowHeight } = useWindowDimensions();
   const [identity, setIdentity] = useState('');
   const [otp, setOtp] = useState('');
   const [step, setStep] = useState<'identity' | 'otp'>('identity');
@@ -34,12 +33,23 @@ export function AuthModal({ visible, onClose, theme, activeTheme, onLoginSuccess
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [keyboardVisible, setKeyboardVisible] = useState(false);
   const [keyboardHeight, setKeyboardHeight] = useState(0);
+  const [containerHeight, setContainerHeight] = useState(0);
+  const [initialHeight, setInitialHeight] = useState(0);
 
-  const cardHeightEstimate = step === 'identity' ? 290 : 330;
-  const centeredPadding = Math.max(30, Math.round((windowHeight - cardHeightEstimate) / 2));
-  const activeBottomPadding = keyboardVisible
-    ? (keyboardHeight > 0 ? keyboardHeight : 290) + 30
-    : centeredPadding;
+  const onLayoutOverlay = (e: LayoutChangeEvent) => {
+    const h = e.nativeEvent.layout.height;
+    if (h > 0) {
+      setContainerHeight(h);
+      if (!initialHeight || (!keyboardVisible && h > initialHeight)) {
+        setInitialHeight(h);
+      }
+    }
+  };
+
+  const isWindowResized = initialHeight > 0 && containerHeight > 0 && containerHeight < initialHeight - 100;
+  const bottomPadding = keyboardVisible
+    ? (isWindowResized ? 30 : (keyboardHeight > 0 ? keyboardHeight : 290) + 30)
+    : 0;
 
   const [otpConfig, setOtpConfig] = useState<{ mode: string; label: string; placeholder: string }>({
     mode: 'both',
@@ -197,16 +207,20 @@ export function AuthModal({ visible, onClose, theme, activeTheme, onLoginSuccess
       animationType="fade"
       statusBarTranslucent={true}
       onRequestClose={() => {
-        handleReset();
-        onClose();
+        if (keyboardVisible) {
+          Keyboard.dismiss();
+        } else {
+          handleReset();
+          onClose();
+        }
       }}
     >
       <View
+        onLayout={onLayoutOverlay}
         style={[
           styles.modalOverlay,
-          {
-            paddingBottom: activeBottomPadding,
-          },
+          keyboardVisible ? styles.modalOverlayWithKeyboard : styles.modalOverlayCentered,
+          keyboardVisible && { paddingBottom: bottomPadding },
         ]}
       >
         {/* Backdrop tap to dismiss keyboard or close modal */}
@@ -432,9 +446,14 @@ const styles = StyleSheet.create({
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.75)',
-    justifyContent: 'flex-end',
     alignItems: 'center',
     paddingHorizontal: 20,
+  },
+  modalOverlayCentered: {
+    justifyContent: 'center',
+  },
+  modalOverlayWithKeyboard: {
+    justifyContent: 'flex-end',
   },
   modalCard: {
     width: '100%',

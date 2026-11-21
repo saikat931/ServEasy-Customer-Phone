@@ -31,7 +31,6 @@ export function AuthModal({ visible, onClose, theme, activeTheme, onLoginSuccess
   const [otp, setOtp] = useState('');
   const [step, setStep] = useState<'identity' | 'otp'>('identity');
   const [loading, setLoading] = useState(false);
-  const [devOtp, setDevOtp] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [keyboardVisible, setKeyboardVisible] = useState(false);
 
@@ -127,7 +126,6 @@ export function AuthModal({ visible, onClose, theme, activeTheme, onLoginSuccess
     try {
       const res = await sendOtpApi(identity.trim());
       if (res.success) {
-        setDevOtp(res.otp || null);
         setStep('otp');
       } else {
         setErrorMessage(res.message || 'Failed to send OTP. Please try again.');
@@ -179,7 +177,6 @@ export function AuthModal({ visible, onClose, theme, activeTheme, onLoginSuccess
     setIdentity('');
     setOtp('');
     setStep('identity');
-    setDevOtp(null);
     setErrorMessage(null);
   };
 
@@ -283,14 +280,6 @@ export function AuthModal({ visible, onClose, theme, activeTheme, onLoginSuccess
                   <View style={styles.errorBox}>
                     <MaterialCommunityIcons name="alert-circle-outline" size={15} color="#FF3B30" style={{ marginRight: 6 }} />
                     <Text style={styles.errorText}>{errorMessage}</Text>
-                  </View>
-                )}
-
-                {/* Login OTP Pill */}
-                {devOtp && step === 'otp' && (
-                  <View style={styles.devOtpBox}>
-                    <MaterialCommunityIcons name="shield-check" size={15} color="#30D158" style={{ marginRight: 6 }} />
-                    <Text style={styles.devOtpText}>Login OTP Code: <Text style={{ fontWeight: '900' }}>{devOtp}</Text></Text>
                   </View>
                 )}
 
@@ -585,21 +574,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '600',
     flex: 1,
-  },
-  devOtpBox: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(48, 209, 88, 0.12)',
-    borderWidth: 1,
-    borderColor: 'rgba(48, 209, 88, 0.3)',
-    borderRadius: 10,
-    padding: 9,
-    marginBottom: 12,
-  },
-  devOtpText: {
-    color: '#30D158',
-    fontSize: 12,
-    fontWeight: '600',
   },
   formContent: {
     width: '100%',

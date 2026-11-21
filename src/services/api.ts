@@ -748,7 +748,7 @@ export async function fetchPlatformFeeSettingApi(): Promise<PlatformFeeSetting> 
   };
 }
 
-export async function sendOtpApi(identity: string): Promise<{ success: boolean; message: string; otp?: string }> {
+export async function sendOtpApi(identity: string): Promise<{ success: boolean; message: string }> {
   try {
     const res = await fetch(`${API_BASE_URL}/auth-api.php`, {
       method: 'POST',
@@ -759,17 +759,15 @@ export async function sendOtpApi(identity: string): Promise<{ success: boolean; 
     if (res.ok) {
       const json = await res.json();
       if (json.status === 'success') {
-        return { success: true, message: json.message || 'OTP sent successfully', otp: json.otp };
+        return { success: true, message: json.message || 'OTP sent successfully' };
       }
       return { success: false, message: json.message || 'Failed to send OTP' };
     }
+    return { success: false, message: 'Authentication server error. Please try again.' };
   } catch (e) {
     console.log('[Auth API] Send OTP error:', e);
+    return { success: false, message: 'Network timeout connecting to authentication server. Please check your internet connection.' };
   }
-
-  // Local simulated OTP for instant testing
-  const mockOtp = Math.floor(100000 + Math.random() * 900000).toString();
-  return { success: true, message: `Verification code sent to ${identity}`, otp: mockOtp };
 }
 
 export async function verifyOtpApi(identity: string, otp: string): Promise<{ success: boolean; message: string; user?: any }> {
@@ -787,20 +785,11 @@ export async function verifyOtpApi(identity: string, otp: string): Promise<{ suc
       }
       return { success: false, message: json.message || 'Invalid verification code' };
     }
+    return { success: false, message: 'Authentication server error. Please try again.' };
   } catch (e) {
     console.log('[Auth API] Verify OTP error:', e);
+    return { success: false, message: 'Network error communicating with authentication service.' };
   }
-
-  // Graceful offline verification if offline
-  if (otp.length === 6) {
-    return {
-      success: true,
-      message: 'Logged in successfully',
-      user: { id: 'usr-101', name: identity.split('@')[0], identity }
-    };
-  }
-
-  return { success: false, message: 'Invalid OTP code. Please try again.' };
 }
 
 // ─── Vehicle Wash Specialized Interfaces & APIs ──────────────────────────────

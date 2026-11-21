@@ -2,25 +2,18 @@ import { Platform } from 'react-native';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import Constants from 'expo-constants';
 
+// Live Production Hostinger API Base URL
+export const HOSTINGER_API_BASE_URL = 'https://beige-curlew-610555.hostingersite.com/api';
+
 // Dynamically determine the backend API base endpoint
 const getBaseApiUrl = (): string => {
-  // 1. Use explicit build-time/env public API URL when building standalone APKs for any network
+  // 1. Use explicit build-time/env public API URL (from .env or EAS build/preview)
   const envApiUrl = process.env.EXPO_PUBLIC_API_URL?.trim();
   if (envApiUrl) {
     return envApiUrl.replace(/\/+$/, '');
   }
-  // 2. Extract host IP dynamically from Expo dev server (works for physical phone on Wi-Fi and emulator)
-  const hostUri = Constants.expoConfig?.hostUri || (Constants as any)?.manifest?.debuggerHost;
-  if (hostUri) {
-    const ip = hostUri.split(':')[0];
-    if (ip && ip !== 'localhost') {
-      return `http://${ip}/ServEasy/backend/api`;
-    }
-  }
-  if (Platform.OS === 'android') {
-    return 'http://192.168.0.248/ServEasy/backend/api';
-  }
-  return 'http://localhost/ServEasy/backend/api';
+  // 2. Default to live Hostinger production API URL so the app always works on mobile data (4G/5G) and any Wi-Fi worldwide
+  return HOSTINGER_API_BASE_URL;
 };
 
 export const API_BASE_URL = getBaseApiUrl();

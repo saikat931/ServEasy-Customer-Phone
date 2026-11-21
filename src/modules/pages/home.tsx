@@ -43,6 +43,7 @@ import { GlassCard } from '../../components/GlassCard';
 import { AboutModal } from '../../components/AboutModal';
 import { AuthModal } from '../../components/AuthModal';
 import { LogoutModal } from '../../components/LogoutModal';
+import { ServerConnectionModal } from '../../components/ServerConnectionModal';
 import { NotificationBanner } from '../../components/NotificationBanner';
 import {
   isCatalogCacheWarm,
@@ -282,6 +283,7 @@ export function Home() {
   const [refreshing, setRefreshing] = useState(false);
   const [skeletonPreviewMode, setSkeletonPreviewMode] = useState(false);
   const [simulateLatency, setSimulateLatency] = useState(false);
+  const [globalServerErrorVisible, setGlobalServerErrorVisible] = useState(false);
 
   const [categoriesList, setCategoriesList] = useState<ApiCategory[]>([]);
 
@@ -316,6 +318,9 @@ export function Home() {
       ]);
       if (cats && cats.length > 0) setCategoriesList(cats);
       if (srvs && srvs.length > 0) setServicesList(srvs as any);
+      if ((!cats || cats.length === 0) && (!srvs || srvs.length === 0)) {
+        setGlobalServerErrorVisible(true);
+      }
       if (isUserLoggedIn && userBookings) {
         setBookings(prev => areBookingsEqual(prev, userBookings) ? prev : userBookings);
       } else if (!isUserLoggedIn) {
@@ -1795,6 +1800,18 @@ export function Home() {
         onConfirm={() => {
           setLogoutModalVisible(false);
           handleLogout();
+        }}
+        theme={theme}
+        activeTheme={activeTheme}
+      />
+
+      {/* GLOBAL SERVER CONNECTION FAILURE MODAL */}
+      <ServerConnectionModal
+        visible={globalServerErrorVisible}
+        onClose={() => setGlobalServerErrorVisible(false)}
+        onRetry={() => {
+          setGlobalServerErrorVisible(false);
+          handleRefresh();
         }}
         theme={theme}
         activeTheme={activeTheme}

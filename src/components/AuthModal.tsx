@@ -16,6 +16,7 @@ import {
 } from 'react-native';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { GlassCard } from './GlassCard';
+import { ServerConnectionModal } from './ServerConnectionModal';
 import { sendOtpApi, verifyOtpApi, fetchOtpConfigApi } from '../services/api';
 
 interface AuthModalProps {
@@ -33,6 +34,8 @@ export function AuthModal({ visible, onClose, theme, activeTheme, onLoginSuccess
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [keyboardVisible, setKeyboardVisible] = useState(false);
+  const [serverErrorVisible, setServerErrorVisible] = useState(false);
+  const [serverErrorMessage, setServerErrorMessage] = useState('Unable to connect to the authentication server. Please check your internet connection or mobile data and try again.');
 
   const emailInputRef = useRef<any>(null);
   const otpInputRef = useRef<any>(null);
@@ -63,11 +66,13 @@ export function AuthModal({ visible, onClose, theme, activeTheme, onLoginSuccess
     if (visible) {
       setLoading(false);
       setErrorMessage(null);
+      setServerErrorVisible(false);
       loadOtpConfig();
     } else {
       abortControllerRef.current?.abort();
       abortControllerRef.current = null;
       setLoading(false);
+      setServerErrorVisible(false);
     }
   }, [visible]);
 
@@ -131,6 +136,7 @@ export function AuthModal({ visible, onClose, theme, activeTheme, onLoginSuccess
 
   const handleSendOtp = () => {
     setErrorMessage(null);
+    setServerErrorVisible(false);
     if (!validateIdentity()) {
       return;
     }
@@ -156,17 +162,26 @@ export function AuthModal({ visible, onClose, theme, activeTheme, onLoginSuccess
       .then((res) => {
         if (controller.signal.aborted) return;
         if (!res.success) {
-          setErrorMessage(res.message || 'Failed to send OTP. Please check your email.');
+          if (res.message === 'Failed to connect with server' || res.message?.toLowerCase().includes('connect') || res.message?.toLowerCase().includes('network')) {
+            setStep('identity');
+            setServerErrorMessage(res.message || 'Failed to connect with server');
+            setServerErrorVisible(true);
+          } else {
+            setErrorMessage(res.message || 'Failed to send OTP. Please check your email.');
+          }
         }
       })
       .catch((e: any) => {
         if (controller.signal.aborted) return;
-        setErrorMessage('Network error communicating with authentication service.');
+        setStep('identity');
+        setServerErrorMessage('Failed to connect with server');
+        setServerErrorVisible(true);
       });
   };
 
   const handleResendOtp = async () => {
     setErrorMessage(null);
+    setServerErrorVisible(false);
     abortControllerRef.current?.abort();
     const controller = new AbortController();
     abortControllerRef.current = controller;
@@ -175,16 +190,23 @@ export function AuthModal({ visible, onClose, theme, activeTheme, onLoginSuccess
       const res = await sendOtpApi(identity.trim(), controller.signal);
       if (controller.signal.aborted) return;
       if (!res.success) {
-        setErrorMessage(res.message || 'Failed to resend verification code.');
+        if (res.message === 'Failed to connect with server' || res.message?.toLowerCase().includes('connect') || res.message?.toLowerCase().includes('network')) {
+          setServerErrorMessage(res.message || 'Failed to connect with server');
+          setServerErrorVisible(true);
+        } else {
+          setErrorMessage(res.message || 'Failed to resend verification code.');
+        }
       }
     } catch (e: any) {
       if (controller.signal.aborted) return;
-      setErrorMessage('Network error resending verification code.');
+      setServerErrorMessage('Failed to connect with server');
+      setServerErrorVisible(true);
     }
   };
 
   const handleVerifyOtp = async () => {
     setErrorMessage(null);
+    setServerErrorVisible(false);
     if (otp.trim().length !== 6) {
       setErrorMessage('Please enter the 6-digit verification code.');
       return;
@@ -215,11 +237,17 @@ export function AuthModal({ visible, onClose, theme, activeTheme, onLoginSuccess
         handleReset();
         onClose();
       } else {
-        setErrorMessage(res.message || 'Invalid verification code.');
+        if (res.message === 'Failed to connect with server' || res.message?.toLowerCase().includes('connect') || res.message?.toLowerCase().includes('network')) {
+          setServerErrorMessage(res.message || 'Failed to connect with server');
+          setServerErrorVisible(true);
+        } else {
+          setErrorMessage(res.message || 'Invalid verification code.');
+        }
       }
     } catch (e: any) {
       if (controller.signal.aborted) return;
-      setErrorMessage('Failed to verify OTP.');
+      setServerErrorMessage('Failed to connect with server');
+      setServerErrorVisible(true);
     } finally {
       setLoading(false);
     }
@@ -233,6 +261,7 @@ export function AuthModal({ visible, onClose, theme, activeTheme, onLoginSuccess
     setOtp('');
     setStep('identity');
     setErrorMessage(null);
+    setServerErrorVisible(false);
   };
 
   return (
@@ -300,6 +329,25 @@ export function AuthModal({ visible, onClose, theme, activeTheme, onLoginSuccess
                 style={[styles.modalCard, keyboardVisible && styles.modalCardCompact]}
                 intensity={activeTheme.glassIntensity + 15}
               >
+                {/* Server Connection Error Overlay */}
+                <ServerConnectionModal
+                  visible={serverErrorVisible}
+                  onClose={() => setServerErrorVisible(false)}
+                  onRetry={() => {
+                    setServerErrorVisible(false);
+                    if (step === 'identity') {
+                      handleSendOtp();
+                    } else {
+                      handleResendOtp();
+                    }
+                  }}
+                  theme={theme}
+                  activeTheme={activeTheme}
+                  title="Failed to Connect with Server"
+                  message={serverErrorMessage}
+                  asOverlay={true}
+                />
+
                 {/* Close button */}
                 <TouchableOpacity
                   style={[styles.closeBtn, keyboardVisible && styles.closeBtnCompact, { backgroundColor: activeTheme.pillInactiveBg }]}

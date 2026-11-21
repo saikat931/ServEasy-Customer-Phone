@@ -6,9 +6,13 @@ import Constants from 'expo-constants';
 const getBaseApiUrl = (): string => {
   const envApiUrl = process.env.EXPO_PUBLIC_API_URL?.trim();
   if (envApiUrl) {
-    return envApiUrl.replace(/\/+$/, '');
+    let clean = envApiUrl.replace(/\/+$/, '');
+    if (!clean.endsWith('/api') && !clean.includes('/api/')) {
+      clean = `${clean}/api`;
+    }
+    return clean;
   }
-  return '';
+  return 'https://beige-curlew-610555.hostingersite.com/api';
 };
 
 export const API_BASE_URL = getBaseApiUrl();

@@ -163,6 +163,7 @@ export function AuthModal({ visible, onClose, theme, activeTheme, onLoginSuccess
         if (controller.signal.aborted) return;
         if (!res.success) {
           if (res.message === 'Failed to connect with server' || res.message?.toLowerCase().includes('connect') || res.message?.toLowerCase().includes('network')) {
+            Keyboard.dismiss();
             setStep('identity');
             setServerErrorMessage(res.message || 'Failed to connect with server');
             setServerErrorVisible(true);
@@ -173,6 +174,7 @@ export function AuthModal({ visible, onClose, theme, activeTheme, onLoginSuccess
       })
       .catch((e: any) => {
         if (controller.signal.aborted) return;
+        Keyboard.dismiss();
         setStep('identity');
         setServerErrorMessage('Failed to connect with server');
         setServerErrorVisible(true);
@@ -191,6 +193,7 @@ export function AuthModal({ visible, onClose, theme, activeTheme, onLoginSuccess
       if (controller.signal.aborted) return;
       if (!res.success) {
         if (res.message === 'Failed to connect with server' || res.message?.toLowerCase().includes('connect') || res.message?.toLowerCase().includes('network')) {
+          Keyboard.dismiss();
           setServerErrorMessage(res.message || 'Failed to connect with server');
           setServerErrorVisible(true);
         } else {
@@ -199,6 +202,7 @@ export function AuthModal({ visible, onClose, theme, activeTheme, onLoginSuccess
       }
     } catch (e: any) {
       if (controller.signal.aborted) return;
+      Keyboard.dismiss();
       setServerErrorMessage('Failed to connect with server');
       setServerErrorVisible(true);
     }
@@ -238,6 +242,7 @@ export function AuthModal({ visible, onClose, theme, activeTheme, onLoginSuccess
         onClose();
       } else {
         if (res.message === 'Failed to connect with server' || res.message?.toLowerCase().includes('connect') || res.message?.toLowerCase().includes('network')) {
+          Keyboard.dismiss();
           setServerErrorMessage(res.message || 'Failed to connect with server');
           setServerErrorVisible(true);
         } else {
@@ -246,6 +251,7 @@ export function AuthModal({ visible, onClose, theme, activeTheme, onLoginSuccess
       }
     } catch (e: any) {
       if (controller.signal.aborted) return;
+      Keyboard.dismiss();
       setServerErrorMessage('Failed to connect with server');
       setServerErrorVisible(true);
     } finally {

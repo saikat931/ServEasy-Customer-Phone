@@ -180,18 +180,7 @@ export function Sidebar({
         handleShareApp();
         onClose();
       }
-    },
-    ...(isLoggedIn
-      ? [
-          {
-            label: 'Logout',
-            icon: 'logout' as const,
-            isDestructive: true,
-            badge: 'Active',
-            onPress: handleSignOut
-          }
-        ]
-      : [])
+    }
   ];
 
   return (

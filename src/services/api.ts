@@ -2,18 +2,13 @@ import { Platform } from 'react-native';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import Constants from 'expo-constants';
 
-// Live Production Hostinger API Base URL
-export const HOSTINGER_API_BASE_URL = 'https://beige-curlew-610555.hostingersite.com/api';
-
-// Dynamically determine the backend API base endpoint
+// Dynamically determine the backend API base endpoint strictly from environment (.env / EXPO_PUBLIC_API_URL)
 const getBaseApiUrl = (): string => {
-  // 1. Use explicit build-time/env public API URL (from .env or EAS build/preview)
   const envApiUrl = process.env.EXPO_PUBLIC_API_URL?.trim();
   if (envApiUrl) {
     return envApiUrl.replace(/\/+$/, '');
   }
-  // 2. Default to live Hostinger production API URL so the app always works on mobile data (4G/5G) and any Wi-Fi worldwide
-  return HOSTINGER_API_BASE_URL;
+  return '';
 };
 
 export const API_BASE_URL = getBaseApiUrl();
@@ -680,6 +675,9 @@ export interface OtpConfigResponse {
 let cachedOtpConfig: OtpConfigResponse | null = null;
 
 export async function fetchOtpConfigApi(): Promise<OtpConfigResponse | null> {
+  if (!API_BASE_URL) {
+    return null;
+  }
   if (cachedOtpConfig) {
     return cachedOtpConfig;
   }
@@ -751,6 +749,9 @@ export async function sendOtpApi(
   identity: string,
   signal?: AbortSignal
 ): Promise<{ success: boolean; message: string }> {
+  if (!API_BASE_URL) {
+    return { success: false, message: 'Failed to connect with server' };
+  }
   try {
     const res = await fetch(`${API_BASE_URL}/auth-api.php`, {
       method: 'POST',
@@ -766,13 +767,13 @@ export async function sendOtpApi(
       }
       return { success: false, message: json.message || 'Failed to send OTP' };
     }
-    return { success: false, message: 'Authentication server error. Please try again.' };
+    return { success: false, message: 'Failed to connect with server' };
   } catch (e: any) {
     if (e?.name === 'AbortError' || signal?.aborted) {
       return { success: false, message: 'Request cancelled.' };
     }
     console.log('[Auth API] Send OTP error:', e);
-    return { success: false, message: 'Network timeout connecting to authentication server. Please check your internet connection.' };
+    return { success: false, message: 'Failed to connect with server' };
   }
 }
 
@@ -781,6 +782,9 @@ export async function verifyOtpApi(
   otp: string,
   signal?: AbortSignal
 ): Promise<{ success: boolean; message: string; user?: any }> {
+  if (!API_BASE_URL) {
+    return { success: false, message: 'Failed to connect with server' };
+  }
   try {
     const res = await fetch(`${API_BASE_URL}/auth-api.php`, {
       method: 'POST',
@@ -796,13 +800,13 @@ export async function verifyOtpApi(
       }
       return { success: false, message: json.message || 'Invalid verification code' };
     }
-    return { success: false, message: 'Authentication server error. Please try again.' };
+    return { success: false, message: 'Failed to connect with server' };
   } catch (e: any) {
     if (e?.name === 'AbortError' || signal?.aborted) {
       return { success: false, message: 'Request cancelled.' };
     }
     console.log('[Auth API] Verify OTP error:', e);
-    return { success: false, message: 'Network error communicating with authentication service.' };
+    return { success: false, message: 'Failed to connect with server' };
   }
 }
 

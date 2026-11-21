@@ -16,18 +16,12 @@
       "channel": "preview",
       "android": {
         "buildType": "apk"
-      },
-      "env": {
-        "EXPO_PUBLIC_API_URL": "https://beige-curlew-610555.hostingersite.com/api"
       }
     },
     "production": {
       "channel": "production",
       "android": {
         "buildType": "apk"
-      },
-      "env": {
-        "EXPO_PUBLIC_API_URL": "https://beige-curlew-610555.hostingersite.com/api"
       }
     }
   },

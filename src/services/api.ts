@@ -12,7 +12,7 @@ const getBaseApiUrl = (): string => {
     }
     return clean;
   }
-  return 'https://beige-curlew-610555.hostingersite.com/api';
+  return '';
 };
 
 export const API_BASE_URL = getBaseApiUrl();

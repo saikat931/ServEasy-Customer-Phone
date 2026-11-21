@@ -329,25 +329,6 @@ export function AuthModal({ visible, onClose, theme, activeTheme, onLoginSuccess
                 style={[styles.modalCard, keyboardVisible && styles.modalCardCompact]}
                 intensity={activeTheme.glassIntensity + 15}
               >
-                {/* Server Connection Error Overlay */}
-                <ServerConnectionModal
-                  visible={serverErrorVisible}
-                  onClose={() => setServerErrorVisible(false)}
-                  onRetry={() => {
-                    setServerErrorVisible(false);
-                    if (step === 'identity') {
-                      handleSendOtp();
-                    } else {
-                      handleResendOtp();
-                    }
-                  }}
-                  theme={theme}
-                  activeTheme={activeTheme}
-                  title="Failed to Connect with Server"
-                  message={serverErrorMessage}
-                  asOverlay={true}
-                />
-
                 {/* Close button */}
                 <TouchableOpacity
                   style={[styles.closeBtn, keyboardVisible && styles.closeBtnCompact, { backgroundColor: activeTheme.pillInactiveBg }]}
@@ -564,6 +545,25 @@ export function AuthModal({ visible, onClose, theme, activeTheme, onLoginSuccess
             </View>
           </ScrollView>
         </KeyboardAvoidingView>
+
+        {/* Full-Screen Server Connection Error Overlay (Zero Clipping & Full Breathing Room) */}
+        <ServerConnectionModal
+          visible={serverErrorVisible}
+          onClose={() => setServerErrorVisible(false)}
+          onRetry={() => {
+            setServerErrorVisible(false);
+            if (step === 'identity') {
+              handleSendOtp();
+            } else {
+              handleResendOtp();
+            }
+          }}
+          theme={theme}
+          activeTheme={activeTheme}
+          title="Unable to Connect"
+          message={serverErrorMessage && serverErrorMessage !== 'Failed to connect with server' ? serverErrorMessage : "We couldn't reach the ServEasy server. Please verify your mobile data or Wi-Fi and try again."}
+          asOverlay={true}
+        />
       </View>
     </Modal>
   );

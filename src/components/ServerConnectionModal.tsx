@@ -6,7 +6,6 @@ import {
   StyleSheet,
   TouchableOpacity,
   TouchableWithoutFeedback,
-  Dimensions,
 } from 'react-native';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 
@@ -27,55 +26,60 @@ export function ServerConnectionModal({
   onRetry,
   theme = 'dark',
   activeTheme,
-  title = 'Failed to Connect with Server',
-  message = 'Unable to establish a connection to the ServEasy server. Please verify your internet connection or mobile data and try again.',
+  title = 'Unable to Connect',
+  message = "We couldn't reach the ServEasy server. Please verify your mobile data or Wi-Fi and try again.",
   asOverlay = false,
 }: ServerConnectionModalProps) {
   if (!visible) return null;
 
   const isDark = theme === 'dark';
-  const cardBg = isDark ? '#161B24' : '#FFFFFF';
-  const titleColor = isDark ? '#F8FAFC' : '#0F172A';
-  const messageColor = isDark ? '#94A3B8' : '#64748B';
-  const borderColor = isDark ? 'rgba(255, 69, 58, 0.4)' : 'rgba(255, 69, 58, 0.25)';
+  const cardBg = isDark ? '#161C26' : '#FFFFFF';
+  const titleColor = isDark ? '#FFFFFF' : '#0F172A';
+  const messageColor = isDark ? 'rgba(255, 255, 255, 0.72)' : '#64748B';
+  const cardBorder = isDark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(0, 0, 0, 0.08)';
 
   const content = (
     <View style={asOverlay ? styles.overlayContainer : styles.modalBackdrop}>
+      {/* Background Dim Backdrop */}
       <TouchableWithoutFeedback onPress={onClose}>
         <View style={StyleSheet.absoluteFill} />
       </TouchableWithoutFeedback>
 
+      {/* Floating Modal Card */}
       <View
         style={[
           styles.modalCard,
           {
             backgroundColor: cardBg,
-            borderColor: borderColor,
+            borderColor: cardBorder,
           },
         ]}
+        onStartShouldSetResponder={() => true}
       >
-        {/* Disconnect Icon Badge */}
+        {/* Glowing Disconnect Icon Badge */}
         <View style={styles.iconCircle}>
-          <MaterialCommunityIcons name="server-network-off" size={32} color="#FF3B30" />
+          <MaterialCommunityIcons name="cloud-off-outline" size={36} color="#FF453A" />
         </View>
 
-        {/* Title & Description */}
+        {/* Title */}
         <Text style={[styles.modalTitle, { color: titleColor }]}>
           {title}
         </Text>
+
+        {/* Subtitle Message */}
         <Text style={[styles.modalMessage, { color: messageColor }]}>
           {message}
         </Text>
 
-        {/* Connection Hint */}
-        <View style={[styles.hintBox, { backgroundColor: isDark ? 'rgba(255,255,255,0.06)' : '#F8FAFC' }]}>
-          <MaterialCommunityIcons name="information-outline" size={14} color="#FF9F0A" style={{ marginRight: 6 }} />
-          <Text style={[styles.hintText, { color: messageColor }]}>
-            Check your mobile data or Wi-Fi connection.
+        {/* Connection Hint Pill */}
+        <View style={[styles.hintBox, { backgroundColor: isDark ? 'rgba(255, 159, 10, 0.12)' : 'rgba(255, 159, 10, 0.08)', borderColor: isDark ? 'rgba(255, 159, 10, 0.28)' : 'rgba(255, 159, 10, 0.2)' }]}>
+          <MaterialCommunityIcons name="wifi-alert" size={16} color="#FF9F0A" style={{ marginRight: 8 }} />
+          <Text style={[styles.hintText, { color: isDark ? '#FFD60A' : '#D97706' }]}>
+            Check your mobile data (4G/5G) or Wi-Fi
           </Text>
         </View>
 
-        {/* Action Buttons */}
+        {/* Action Buttons Column */}
         <View style={styles.actionsColumn}>
           {onRetry && (
             <TouchableOpacity
@@ -83,7 +87,7 @@ export function ServerConnectionModal({
               onPress={onRetry}
               style={styles.retryBtn}
             >
-              <MaterialCommunityIcons name="refresh" size={18} color="#FFFFFF" style={{ marginRight: 6 }} />
+              <MaterialCommunityIcons name="refresh" size={18} color="#FFFFFF" style={{ marginRight: 8 }} />
               <Text style={styles.retryBtnText}>Retry Connection</Text>
             </TouchableOpacity>
           )}
@@ -95,7 +99,7 @@ export function ServerConnectionModal({
               styles.dismissBtn,
               {
                 backgroundColor: isDark ? 'rgba(255, 255, 255, 0.08)' : '#F1F5F9',
-                borderColor: isDark ? 'rgba(255, 255, 255, 0.14)' : '#E2E8F0',
+                borderColor: isDark ? 'rgba(255, 255, 255, 0.12)' : '#E2E8F0',
               },
             ]}
           >
@@ -131,7 +135,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0, 0, 0, 0.78)',
     justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: 24,
+    paddingHorizontal: 20,
   },
   overlayContainer: {
     position: 'absolute',
@@ -139,61 +143,64 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.88)',
+    backgroundColor: 'rgba(0, 0, 0, 0.82)',
     justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: 20,
-    zIndex: 999,
-    borderRadius: 22,
+    zIndex: 99999,
   },
   modalCard: {
     width: '100%',
-    maxWidth: 360,
-    borderRadius: 20,
-    borderWidth: 1.5,
-    padding: 22,
+    maxWidth: 350,
+    borderRadius: 24,
+    borderWidth: 1.2,
+    paddingVertical: 26,
+    paddingHorizontal: 22,
     alignItems: 'center',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.45,
-    shadowRadius: 20,
-    elevation: 12,
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.5,
+    shadowRadius: 24,
+    elevation: 16,
   },
   iconCircle: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    backgroundColor: 'rgba(255, 59, 48, 0.14)',
+    width: 70,
+    height: 70,
+    borderRadius: 35,
+    backgroundColor: 'rgba(255, 69, 58, 0.12)',
     borderWidth: 1.5,
-    borderColor: 'rgba(255, 59, 48, 0.35)',
+    borderColor: 'rgba(255, 69, 58, 0.28)',
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 16,
   },
   modalTitle: {
-    fontSize: 17,
+    fontSize: 19,
     fontWeight: '800',
     textAlign: 'center',
     marginBottom: 8,
+    letterSpacing: 0.2,
   },
   modalMessage: {
     fontSize: 13,
-    lineHeight: 18,
+    lineHeight: 19,
     textAlign: 'center',
-    marginBottom: 14,
+    marginBottom: 18,
+    paddingHorizontal: 8,
   },
   hintBox: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 8,
+    paddingVertical: 10,
     paddingHorizontal: 12,
-    borderRadius: 10,
-    marginBottom: 18,
+    borderRadius: 12,
+    borderWidth: 1,
+    marginBottom: 20,
     width: '100%',
   },
   hintText: {
-    fontSize: 11,
-    fontWeight: '500',
+    fontSize: 12,
+    fontWeight: '600',
     flex: 1,
   },
   actionsColumn: {
@@ -204,25 +211,30 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    height: 46,
-    borderRadius: 12,
+    height: 48,
+    borderRadius: 14,
     backgroundColor: '#0084FF',
+    shadowColor: '#0084FF',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.35,
+    shadowRadius: 8,
+    elevation: 4,
   },
   retryBtnText: {
     color: '#FFFFFF',
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: '700',
     letterSpacing: 0.3,
   },
   dismissBtn: {
     alignItems: 'center',
     justifyContent: 'center',
-    height: 42,
-    borderRadius: 12,
+    height: 44,
+    borderRadius: 14,
     borderWidth: 1,
   },
   dismissBtnText: {
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: '600',
   },
 });

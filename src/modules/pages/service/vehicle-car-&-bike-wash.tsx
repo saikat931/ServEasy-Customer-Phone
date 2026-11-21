@@ -1,26 +1,21 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
-// ─── Vehicle Details Cache (per-user localStorage) ──────────────────────────
+// ─── Vehicle Details Cache (per-user AsyncStorage) ──────────────────────────
 const VEHICLE_CACHE_KEY = (userId?: number) =>
   userId ? `@serveasy_vehicle_${userId}` : `@serveasy_vehicle_guest`;
 
-function getStoredVehicle(userId?: number): { brand: string; model: string; regNo: string; color: string } | null {
+async function getStoredVehicle(userId?: number): Promise<{ brand: string; model: string; regNo: string; color: string } | null> {
   try {
-    const storage = typeof globalThis !== 'undefined' ? (globalThis as any).localStorage : null;
-    if (storage) {
-      const raw = storage.getItem(VEHICLE_CACHE_KEY(userId));
-      if (raw) return JSON.parse(raw);
-    }
+    const raw = await AsyncStorage.getItem(VEHICLE_CACHE_KEY(userId));
+    if (raw) return JSON.parse(raw);
   } catch (_) {}
   return null;
 }
 
-function saveStoredVehicle(userId: number | undefined, data: { brand: string; model: string; regNo: string; color: string }) {
+async function saveStoredVehicle(userId: number | undefined, data: { brand: string; model: string; regNo: string; color: string }) {
   try {
-    const storage = typeof globalThis !== 'undefined' ? (globalThis as any).localStorage : null;
-    if (storage) {
-      storage.setItem(VEHICLE_CACHE_KEY(userId), JSON.stringify(data));
-    }
+    await AsyncStorage.setItem(VEHICLE_CACHE_KEY(userId), JSON.stringify(data));
   } catch (_) {}
 }
 // ────────────────────────────────────────────────────────────────────────────
@@ -284,7 +279,7 @@ export const VehicleCarBikeWash: React.FC<VehicleCarBikeWashProps> = ({
           setCustomerName(userProf.user.fullName.trim());
         }
         // Load cached vehicle details for this user (blank for new users)
-        const cachedVehicle = getStoredVehicle(currentUser?.id);
+        const cachedVehicle = await getStoredVehicle(currentUser?.id);
         if (cachedVehicle) {
           if (cachedVehicle.brand)  setVehicleBrand(cachedVehicle.brand);
           if (cachedVehicle.model)  setVehicleModel(cachedVehicle.model);
@@ -294,7 +289,7 @@ export const VehicleCarBikeWash: React.FC<VehicleCarBikeWashProps> = ({
       } else {
         setSavedAddresses([]);
         // Even guest users can have cached vehicle data (guest key)
-        const cachedVehicle = getStoredVehicle(undefined);
+        const cachedVehicle = await getStoredVehicle(undefined);
         if (cachedVehicle) {
           if (cachedVehicle.brand)  setVehicleBrand(cachedVehicle.brand);
           if (cachedVehicle.model)  setVehicleModel(cachedVehicle.model);

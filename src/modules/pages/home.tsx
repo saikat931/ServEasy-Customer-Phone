@@ -1,4 +1,5 @@
 import React, { useState, useCallback, useMemo, useRef, useEffect } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   StatusBar,
   StyleSheet,
@@ -100,16 +101,13 @@ export interface CustomerUserSession {
 
 const CUSTOMER_STORAGE_KEY = '@serveasy_customer_user';
 
-function getStoredCustomerUser(): CustomerUserSession {
+export async function getStoredCustomerUser(): Promise<CustomerUserSession> {
   try {
-    const storage = typeof globalThis !== 'undefined' ? (globalThis as any).localStorage : null;
-    if (storage) {
-      const raw = storage.getItem(CUSTOMER_STORAGE_KEY);
-      if (raw) {
-        const parsed = JSON.parse(raw);
-        if (parsed && parsed.isLoggedIn) {
-          return parsed;
-        }
+    const raw = await AsyncStorage.getItem(CUSTOMER_STORAGE_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (parsed && parsed.isLoggedIn) {
+        return parsed;
       }
     }
   } catch (e) {
@@ -122,25 +120,19 @@ function getStoredCustomerUser(): CustomerUserSession {
   };
 }
 
-function saveStoredCustomerUser(user: CustomerUserSession) {
+export async function saveStoredCustomerUser(user: CustomerUserSession): Promise<void> {
   try {
-    const storage = typeof globalThis !== 'undefined' ? (globalThis as any).localStorage : null;
-    if (storage) {
-      storage.setItem(CUSTOMER_STORAGE_KEY, JSON.stringify(user));
-    }
+    await AsyncStorage.setItem(CUSTOMER_STORAGE_KEY, JSON.stringify(user));
   } catch (e) {
-    // Ignore storage write error
+    console.log('[Storage] save error:', e);
   }
 }
 
-function removeStoredCustomerUser() {
+export async function removeStoredCustomerUser(): Promise<void> {
   try {
-    const storage = typeof globalThis !== 'undefined' ? (globalThis as any).localStorage : null;
-    if (storage) {
-      storage.removeItem(CUSTOMER_STORAGE_KEY);
-    }
+    await AsyncStorage.removeItem(CUSTOMER_STORAGE_KEY);
   } catch (e) {
-    // Ignore storage delete error
+    console.log('[Storage] remove error:', e);
   }
 }
 
@@ -152,13 +144,45 @@ export function Home() {
   const [theme, setTheme] = useState<'dark' | 'light'>('dark');
 
   // Customer session state with storage hydration on initial cold start or reload
-  const initialUser = useMemo(() => getStoredCustomerUser(), []);
-  const [currentUser, setCurrentUser] = useState<CustomerUserSession>(initialUser);
-  const currentUserRef = useRef<CustomerUserSession>(initialUser);
+  const guestUser: CustomerUserSession = useMemo(() => ({
+    name: 'Guest User',
+    identity: '',
+    isLoggedIn: false,
+  }), []);
+  const [currentUser, setCurrentUser] = useState<CustomerUserSession>(guestUser);
+  const currentUserRef = useRef<CustomerUserSession>(guestUser);
 
   useEffect(() => {
     currentUserRef.current = currentUser;
   }, [currentUser]);
+
+  // Restore stored session from AsyncStorage on app launch / cold start
+  useEffect(() => {
+    let isMounted = true;
+    async function restoreSession() {
+      try {
+        const stored = await getStoredCustomerUser();
+        if (isMounted && stored && stored.isLoggedIn) {
+          currentUserRef.current = stored;
+          setCurrentUser(stored);
+          if (stored.name && stored.name !== 'Guest User') {
+            setFullName(stored.name);
+          }
+          if (stored.phone && !stored.phone.includes('@')) {
+            setPhoneNumber(stored.phone);
+          } else if (stored.identity && !stored.identity.includes('@')) {
+            setPhoneNumber(stored.identity);
+          }
+        }
+      } catch (err) {
+        console.log('[Home] Session restore error:', err);
+      }
+    }
+    restoreSession();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   // Booking Modal Wizard State
   const [bookingModalVisible, setBookingModalVisible] = useState(false);
@@ -168,14 +192,8 @@ export function Home() {
   // Booking form inputs
   const [bookingDate, setBookingDate] = useState('');
   const [bookingTime, setBookingTime] = useState('10:00 AM');
-  const [fullName, setFullName] = useState(initialUser.isLoggedIn && initialUser.name ? initialUser.name : 'Guest User');
-  const [phoneNumber, setPhoneNumber] = useState(
-    initialUser.isLoggedIn
-      ? (initialUser.phone && !initialUser.phone.includes('@')
-          ? initialUser.phone
-          : (!initialUser.identity?.includes('@') ? initialUser.identity : ''))
-      : ''
-  );
+  const [fullName, setFullName] = useState('Guest User');
+  const [phoneNumber, setPhoneNumber] = useState('');
   const [serviceAddress, setServiceAddress] = useState('');
   const [isPinningHomeLoc, setIsPinningHomeLoc] = useState(false);
 
@@ -1408,7 +1426,15 @@ export function Home() {
                 bookingsCount={currentUser?.isLoggedIn ? bookings.length : 0}
                 userProfile={userProfile}
                 onUpdateProfile={setUserProfile}
-                onUpdateUserName={(name) => setFullName(name)}
+                onUpdateUserName={(name) => {
+                  setFullName(name);
+                  setCurrentUser(prev => {
+                    const updated = { ...prev, name };
+                    currentUserRef.current = updated;
+                    saveStoredCustomerUser(updated);
+                    return updated;
+                  });
+                }}
                 simulateLatency={simulateLatency}
                 onToggleLatency={() => setSimulateLatency(!simulateLatency)}
                 skeletonPreviewMode={skeletonPreviewMode}

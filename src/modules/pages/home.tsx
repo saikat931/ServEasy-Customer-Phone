@@ -546,6 +546,17 @@ export function Home() {
     setCurrentScreen('home');
   }, [currentUser?.id, currentUser?.isLoggedIn, setCurrentScreen]);
 
+  const homeScrollRef = useRef<any>(null);
+
+  const handleLogoPress = useCallback(() => {
+    handleTabSelect('home');
+    setCurrentScreen('home');
+    setSidebarOpen(false);
+    setTimeout(() => {
+      homeScrollRef.current?.scrollTo({ y: 0, animated: true });
+    }, 50);
+  }, [handleTabSelect]);
+
   const handleLogout = useCallback(() => {
     const guestUser: CustomerUserSession = {
       name: 'Guest User',
@@ -1274,7 +1285,7 @@ export function Home() {
             userProfile={userProfile}
             wishlistCount={wishlistIds.length}
             onWishlistPress={() => setCurrentScreen('wishlist')}
-            onLogoPress={() => setCurrentScreen('home')}
+            onLogoPress={handleLogoPress}
             onProfilePress={() => handleTabSelect('profile')}
           />
         )}
@@ -1321,6 +1332,8 @@ export function Home() {
         <View style={{ flex: 1, display: (currentScreen === 'home') ? 'flex' : 'none' }}>
           <View style={{ flex: 1, display: activeTab === 'home' ? 'flex' : 'none' }}>
             <HomeFeed
+              scrollRef={homeScrollRef}
+              onLogoPress={handleLogoPress}
               theme={theme}
               activeTheme={activeTheme}
               servicesList={servicesList}
@@ -1504,7 +1517,7 @@ export function Home() {
               userProfile={userProfile}
               wishlistCount={wishlistIds.length}
               onWishlistPress={() => setCurrentScreen('wishlist')}
-              onLogoPress={() => setCurrentScreen('home')}
+              onLogoPress={handleLogoPress}
               onProfilePress={() => handleTabSelect('profile')}
             />
             <Payment
@@ -1536,7 +1549,7 @@ export function Home() {
               userProfile={userProfile}
               wishlistCount={wishlistIds.length}
               onWishlistPress={() => setCurrentScreen('wishlist')}
-              onLogoPress={() => setCurrentScreen('home')}
+              onLogoPress={handleLogoPress}
               onProfilePress={() => handleTabSelect('profile')}
             />
             <Blog
@@ -1566,7 +1579,7 @@ export function Home() {
               userProfile={userProfile}
               wishlistCount={wishlistIds.length}
               onWishlistPress={() => setCurrentScreen('wishlist')}
-              onLogoPress={() => setCurrentScreen('home')}
+              onLogoPress={handleLogoPress}
               onProfilePress={() => handleTabSelect('profile')}
             />
             <Contact
@@ -1596,7 +1609,7 @@ export function Home() {
               userProfile={userProfile}
               wishlistCount={wishlistIds.length}
               onWishlistPress={() => setCurrentScreen('wishlist')}
-              onLogoPress={() => setCurrentScreen('home')}
+              onLogoPress={handleLogoPress}
               onProfilePress={() => handleTabSelect('profile')}
             />
             <VehicleCarBikeWash
@@ -1651,7 +1664,7 @@ export function Home() {
               userProfile={userProfile}
               wishlistCount={wishlistIds.length}
               onWishlistPress={() => setCurrentScreen('wishlist')}
-              onLogoPress={() => setCurrentScreen('home')}
+              onLogoPress={handleLogoPress}
               onProfilePress={() => handleTabSelect('profile')}
             />
             <PersonalStaffMaids
@@ -2294,6 +2307,8 @@ export function Home() {
 
 // Rename home feed container so that it doesn't conflict with main <Home> component
 interface HomeFeedProps {
+  scrollRef?: any;
+  onLogoPress?: () => void;
   theme: 'dark' | 'light';
   activeTheme: any;
   servicesList: ServiceItem[];
@@ -2317,6 +2332,8 @@ interface HomeFeedProps {
 
 // Local helper component wrapping the home discovery view matching Web index.php (Memoized for instant 0ms switching)
 const HomeFeed = React.memo(function HomeFeed({
+  scrollRef,
+  onLogoPress,
   theme,
   activeTheme,
   servicesList,
@@ -2576,6 +2593,7 @@ const HomeFeed = React.memo(function HomeFeed({
 
   return (
     <ScrollView
+      ref={scrollRef as any}
       contentContainerStyle={styles.scrollContent}
       showsVerticalScrollIndicator={false}
       scrollEventThrottle={16}
@@ -3284,7 +3302,9 @@ const HomeFeed = React.memo(function HomeFeed({
 
         {/* Brand Header */}
         <View style={styles.footerBrandRow}>
-          <Image source={require('../../../assets/logo.png')} style={styles.footerLogo} />
+          <TouchableOpacity activeOpacity={0.7} onPress={onLogoPress}>
+            <Image source={require('../../../assets/logo.png')} style={styles.footerLogo} />
+          </TouchableOpacity>
           <Text style={[styles.footerBrandDesc, { color: activeTheme.textSecondary }]}>
             From mechanical care and private room booking to professional personal assistance, emergency help, and logistics. Book trusted services instantly with transparent booking.
           </Text>

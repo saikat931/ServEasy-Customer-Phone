@@ -172,8 +172,9 @@ export function TopNavbar({
   return (
     <View style={styles.headerContainer}>
       <TouchableOpacity
-        activeOpacity={onLogoPress ? 0.7 : 1}
+        activeOpacity={0.7}
         onPress={onLogoPress}
+        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
         style={styles.headerLeft}
       >
         <Image source={require('../../assets/logo.png')} style={styles.headerLogoImage} />

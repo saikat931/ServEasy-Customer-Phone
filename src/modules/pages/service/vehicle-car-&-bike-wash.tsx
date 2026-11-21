@@ -126,6 +126,7 @@ export const VehicleCarBikeWash: React.FC<VehicleCarBikeWashProps> = ({
   const [locationOption, setLocationOption] = useState<'doorstep' | 'center'>('doorstep');
   const [savedAddresses, setSavedAddresses] = useState<SavedAddress[]>([]);
   const [selectedAddressId, setSelectedAddressId] = useState<number | null>(null);
+  const [addressLabel, setAddressLabel] = useState<'Home' | 'Work' | 'Other'>('Home');
   const [customAddress, setCustomAddress] = useState('');
   const [landmark, setLandmark] = useState('');
   const [pincode, setPincode] = useState('700001');
@@ -589,7 +590,7 @@ export const VehicleCarBikeWash: React.FC<VehicleCarBikeWashProps> = ({
     try {
       const saveRes = await saveUserAddressApi({
         userId: currentUser?.id || 8,
-        label: 'Home',
+        label: addressLabel || 'Home',
         address: customAddress.trim(),
         landmark: landmark.trim(),
         pincode: pincode.trim(),
@@ -991,12 +992,14 @@ export const VehicleCarBikeWash: React.FC<VehicleCarBikeWashProps> = ({
                         color={isSelected ? '#000' : '#30D158'}
                       />
                     </View>
-                    <Text style={[styles.cardTitle, { color: activeTheme.textPrimary }]}>
-                      {item.title}
-                    </Text>
-                    <Text style={[styles.cardDesc, { color: activeTheme.textSecondary }]}>
-                      {item.desc}
-                    </Text>
+                    <View style={{ flex: 1, justifyContent: 'center' }}>
+                      <Text style={[styles.cardTitle, { color: activeTheme.textPrimary }]}>
+                        {item.title}
+                      </Text>
+                      <Text style={[styles.cardDesc, { color: activeTheme.textSecondary, marginTop: 2 }]}>
+                        {item.desc}
+                      </Text>
+                    </View>
                     {isSelected && (
                       <View style={styles.selectedBadge}>
                         <MaterialCommunityIcons name="check-circle" size={16} color="#30D158" />
@@ -1316,6 +1319,43 @@ export const VehicleCarBikeWash: React.FC<VehicleCarBikeWashProps> = ({
                     </View>
                   </View>
                 )}
+
+                <Text style={[styles.inputLabel, { color: activeTheme.textPrimary, marginBottom: 8 }]}>Address Label *</Text>
+                <View style={{ flexDirection: 'row', gap: 8, marginBottom: 14 }}>
+                  {(['Home', 'Work', 'Other'] as const).map(lbl => {
+                    const isLblSelected = addressLabel === lbl;
+                    return (
+                      <TouchableOpacity
+                        key={lbl}
+                        onPress={() => setAddressLabel(lbl)}
+                        style={{
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                          gap: 6,
+                          paddingHorizontal: 16,
+                          paddingVertical: 9,
+                          borderRadius: 12,
+                          borderWidth: 1.5,
+                          borderColor: isLblSelected ? '#30D158' : activeTheme.cardBorder,
+                          backgroundColor: isLblSelected ? 'rgba(48, 209, 88, 0.15)' : activeTheme.cardBg,
+                        }}
+                      >
+                        <MaterialCommunityIcons
+                          name={lbl === 'Home' ? 'home' : (lbl === 'Work' ? 'briefcase' : 'map-marker')}
+                          size={16}
+                          color={isLblSelected ? '#30D158' : activeTheme.textSecondary}
+                        />
+                        <Text style={{
+                          color: isLblSelected ? '#30D158' : activeTheme.textPrimary,
+                          fontSize: 13,
+                          fontWeight: isLblSelected ? '700' : '500'
+                        }}>
+                          {lbl}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
 
                 <Text style={[styles.inputLabel, { color: activeTheme.textPrimary }]}>Full Street Address *</Text>
                 <TextInput

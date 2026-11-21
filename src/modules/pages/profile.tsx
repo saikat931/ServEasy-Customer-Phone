@@ -4,6 +4,7 @@ import {
   Text,
   View,
   TouchableOpacity,
+  TouchableWithoutFeedback,
   ScrollView,
   Alert,
   Modal,
@@ -83,6 +84,7 @@ export const Profile = React.memo(function Profile({
   const [addressList, setAddressList] = useState<AddressItem[]>(addresses || []);
 
   // Add Address Modal state
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | number | null>(null);
   const [addModalVisible, setAddModalVisible] = useState(false);
   const [newLabel, setNewLabel] = useState<'Home' | 'Work' | 'Other'>('Home');
   const [newStreet, setNewStreet] = useState('');
@@ -288,27 +290,25 @@ export const Profile = React.memo(function Profile({
 
   // Handle Delete Address
   const handleDeleteAddr = (id: string | number) => {
-    Alert.alert('Delete Address', 'Are you sure you want to remove this address from your profile?', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Delete',
-        style: 'destructive',
-        onPress: async () => {
-          setAddressList(prev => {
-            const next = prev.filter(a => a.id !== id);
-            if (next.length > 0 && !next.some(a => a.isDefault)) {
-              next[0].isDefault = true;
-            }
-            return next;
-          });
-          const numId = typeof id === 'number' ? id : parseInt(String(id), 10);
-          if (userId && !isNaN(numId)) {
-            await deleteUserAddressApi(userId, numId);
-          }
-          if (onDeleteAddress) onDeleteAddress(id);
-        },
-      },
-    ]);
+    setDeleteConfirmId(id);
+  };
+
+  const confirmDeleteAddress = async () => {
+    if (!deleteConfirmId) return;
+    const id = deleteConfirmId;
+    setAddressList(prev => {
+      const next = prev.filter(a => a.id !== id);
+      if (next.length > 0 && !next.some(a => a.isDefault)) {
+        next[0].isDefault = true;
+      }
+      return next;
+    });
+    const numId = typeof id === 'number' ? id : parseInt(String(id), 10);
+    if (userId && !isNaN(numId)) {
+      await deleteUserAddressApi(userId, numId);
+    }
+    if (onDeleteAddress) onDeleteAddress(id);
+    setDeleteConfirmId(null);
   };
 
   // Handle Save New Address
@@ -467,11 +467,6 @@ export const Profile = React.memo(function Profile({
                 <View style={[styles.badgeContainer, { borderColor: '#0084FF', backgroundColor: 'rgba(0,132,255,0.08)' }]}>
                   <Text style={[styles.badgeText, { color: '#0084FF' }]}>CUSTOMER</Text>
                 </View>
-                <View style={[styles.badgeContainer, { borderColor: '#30D158', backgroundColor: 'rgba(48,209,88,0.08)' }]}>
-                  <Text style={[styles.badgeText, { color: '#30D158' }]}>
-                    ID #{String(displayId).padStart(4, '0')}
-                  </Text>
-                </View>
                 <View style={[styles.badgeContainer, { borderColor: activeTheme.cardBorder, backgroundColor: activeTheme.pillInactiveBg }]}>
                   <Text style={[styles.badgeText, { color: activeTheme.textSecondary }]}>
                     Since {displayMemberSince}
@@ -519,15 +514,6 @@ export const Profile = React.memo(function Profile({
         </View>
 
         <GlassCard theme={theme} style={styles.profileOptionsCard} intensity={activeTheme.glassIntensity}>
-          <View style={styles.dbRow}>
-            <Text style={[styles.dbLabel, { color: activeTheme.textSecondary }]}>Account ID</Text>
-            <Text style={[styles.dbValue, { color: activeTheme.textPrimary }]}>
-              #<Text style={{ color: '#0084FF', fontWeight: '800' }}>{displayId}</Text>
-            </Text>
-          </View>
-
-          <View style={[styles.categoryHeaderLine, { backgroundColor: activeTheme.cardBorder, marginVertical: 10, marginLeft: 0 }]} />
-
           <View style={styles.dbRow}>
             <Text style={[styles.dbLabel, { color: activeTheme.textSecondary }]}>Active Status</Text>
             <View style={[styles.statusBadge, { backgroundColor: displayIsActive ? 'rgba(48,209,88,0.12)' : 'rgba(255,59,48,0.12)', borderColor: displayIsActive ? '#30D158' : '#FF3B30' }]}>
@@ -727,105 +713,6 @@ export const Profile = React.memo(function Profile({
           </GlassCard>
         ))}
 
-        {/* RECENT VEHICLE WASH BOOKINGS CARD (serveasy-booking.vehicle_wash) */}
-        {profileData?.recentBookings && profileData.recentBookings.length > 0 && (
-          <>
-            <View style={styles.sectionHeaderRow}>
-              <Text style={[styles.sectionTitle, { color: activeTheme.textPrimary, marginTop: 0, marginBottom: 0 }]}>
-                Recent Bookings (Live DB)
-              </Text>
-              <View style={[styles.statusBadge, { backgroundColor: 'rgba(48,209,88,0.1)', borderColor: '#30D158' }]}>
-                <Text style={[styles.statusBadgeText, { color: '#30D158' }]}>
-                  {profileData.recentBookings.length} BOOKINGS
-                </Text>
-              </View>
-            </View>
-
-            {profileData.recentBookings.map((bk: any, idx: number) => {
-              const isCompleted = bk.status?.toLowerCase() === 'completed';
-              const vehicleDisplay = [bk.vehicle_type, bk.vehicle_brand, bk.vehicle_model].filter(Boolean).join(' • ');
-              return (
-                <GlassCard
-                  key={bk.id || idx}
-                  theme={theme}
-                  style={[styles.profileOptionsCard, { marginBottom: 10 }]}
-                  intensity={activeTheme.glassIntensity}
-                >
-                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-                    <Text style={{ fontSize: 13, fontWeight: '800', color: activeTheme.textPrimary }}>
-                      {vehicleDisplay || 'Vehicle Service'}
-                    </Text>
-                    <View
-                      style={[
-                        styles.statusBadge,
-                        {
-                          backgroundColor: isCompleted ? 'rgba(48,209,88,0.12)' : 'rgba(0,132,255,0.12)',
-                          borderColor: isCompleted ? '#30D158' : '#0084FF',
-                        },
-                      ]}
-                    >
-                      <Text style={[styles.statusBadgeText, { color: isCompleted ? '#30D158' : '#0084FF' }]}>
-                        {(bk.status || 'ACTIVE').toUpperCase()}
-                      </Text>
-                    </View>
-                  </View>
-
-                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <Text style={{ fontSize: 11, color: activeTheme.textSecondary }}>
-                      {bk.schedule_date || bk.created_at?.substring(0, 10)}
-                      {bk.vehicle_reg_no ? ` • ${bk.vehicle_reg_no}` : ''}
-                      {bk.payment_method ? ` • ${bk.payment_method}` : ''}
-                    </Text>
-                    <Text style={{ fontSize: 13, fontWeight: '800', color: '#0084FF' }}>
-                      ₹{bk.total_amount ? parseFloat(bk.total_amount).toFixed(2) : '0.00'}
-                    </Text>
-                  </View>
-                </GlassCard>
-              );
-            })}
-          </>
-        )}
-
-        {/* ACCOUNT MANAGEMENT SETTINGS (Real Database Operations) */}
-        <Text style={[styles.sectionTitle, { color: activeTheme.textPrimary }]}>Account Settings</Text>
-        <GlassCard theme={theme} style={styles.profileOptionsCard} intensity={activeTheme.glassIntensity}>
-          {[
-            {
-              label: 'Personal Information',
-              icon: 'account-cog-outline',
-              desc: 'Update full name, phone number, and email in database',
-              onPress: () => setEditModalVisible(true),
-            },
-            {
-              label: 'Password & Security',
-              icon: 'shield-lock-outline',
-              desc: 'Manage account authentication password and sessions',
-              onPress: () => Alert.alert('Security Settings', 'Account authentication password management is configured via your login credentials.'),
-            },
-            {
-              label: 'Saved Address Book',
-              icon: 'map-marker-multiple-outline',
-              desc: 'Manage your saved service delivery addresses',
-              onPress: () => setAddModalVisible(true),
-            },
-          ].map((option, idx) => (
-            <View key={idx}>
-              {idx > 0 && <View style={[styles.categoryHeaderLine, { backgroundColor: activeTheme.cardBorder, marginVertical: 12, marginLeft: 0 }]} />}
-              <TouchableOpacity style={styles.profileOptionItem} onPress={option.onPress}>
-                <View style={styles.profileOptionLeft}>
-                  <View style={[styles.profileOptionIcon, { backgroundColor: activeTheme.pillInactiveBg }]}>
-                    <MaterialCommunityIcons name={option.icon as any} size={18} color="#0084FF" />
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={[styles.profileOptionText, { color: activeTheme.textPrimary }]}>{option.label}</Text>
-                    <Text style={{ fontSize: 11, color: activeTheme.textSecondary, marginTop: 2 }}>{option.desc}</Text>
-                  </View>
-                </View>
-                <MaterialCommunityIcons name="chevron-right" size={16} color={activeTheme.textSecondary} />
-              </TouchableOpacity>
-            </View>
-          ))}
-        </GlassCard>
       </ScrollView>
 
       {/* EDIT PROFILE MODAL (Saves to serveasy.site_user) */}
@@ -1166,6 +1053,64 @@ export const Profile = React.memo(function Profile({
             </View>
           </View>
         </KeyboardAvoidingView>
+      </Modal>
+
+      {/* PRETTY DELETE ADDRESS CONFIRMATION MODAL */}
+      <Modal
+        visible={!!deleteConfirmId}
+        animationType="fade"
+        transparent={true}
+        onRequestClose={() => setDeleteConfirmId(null)}
+      >
+        <View style={styles.modalOverlay}>
+          <TouchableWithoutFeedback onPress={() => setDeleteConfirmId(null)}>
+            <View style={StyleSheet.absoluteFill} />
+          </TouchableWithoutFeedback>
+          <View style={[
+            styles.deleteModalCard,
+            {
+              backgroundColor: activeTheme.modalBg || '#161922',
+              borderColor: activeTheme.cardBorder,
+            }
+          ]}>
+            <View style={styles.deleteIconCircle}>
+              <MaterialCommunityIcons name="trash-can-outline" size={28} color="#FF3B30" />
+            </View>
+            <Text style={[styles.deleteModalTitle, { color: activeTheme.textPrimary }]}>
+              Delete Address
+            </Text>
+            <Text style={[styles.deleteModalDesc, { color: activeTheme.textSecondary }]}>
+              Are you sure you want to remove this address from your profile? This action cannot be undone.
+            </Text>
+
+            <View style={styles.deleteModalButtonsRow}>
+              <TouchableOpacity
+                onPress={() => setDeleteConfirmId(null)}
+                style={[
+                  styles.deleteModalBtnCancel,
+                  {
+                    backgroundColor: activeTheme.pillInactiveBg,
+                    borderColor: activeTheme.cardBorder,
+                  }
+                ]}
+              >
+                <Text style={[styles.deleteModalBtnCancelText, { color: activeTheme.textPrimary }]}>
+                  Cancel
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                onPress={confirmDeleteAddress}
+                style={styles.deleteModalBtnDelete}
+              >
+                <MaterialCommunityIcons name="trash-can" size={16} color="#FFFFFF" style={{ marginRight: 6 }} />
+                <Text style={styles.deleteModalBtnDeleteText}>
+                  Delete
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
       </Modal>
     </>
   );
@@ -1663,5 +1608,73 @@ const styles = StyleSheet.create({
     color: '#64748B',
     fontSize: 7.5,
     fontWeight: '500',
+  },
+  deleteModalCard: {
+    width: '100%',
+    maxWidth: 340,
+    borderRadius: 22,
+    borderWidth: 1.5,
+    padding: 24,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.35,
+    shadowRadius: 20,
+    elevation: 10,
+  },
+  deleteIconCircle: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: 'rgba(255, 59, 48, 0.12)',
+    borderWidth: 1.5,
+    borderColor: 'rgba(255, 59, 48, 0.25)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 16,
+  },
+  deleteModalTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  deleteModalDesc: {
+    fontSize: 13,
+    lineHeight: 18,
+    textAlign: 'center',
+    marginBottom: 20,
+    paddingHorizontal: 8,
+  },
+  deleteModalButtonsRow: {
+    flexDirection: 'row',
+    gap: 12,
+    width: '100%',
+  },
+  deleteModalBtnCancel: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  deleteModalBtnCancelText: {
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  deleteModalBtnDelete: {
+    flex: 1,
+    flexDirection: 'row',
+    backgroundColor: '#FF3B30',
+    paddingVertical: 12,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  deleteModalBtnDeleteText: {
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontWeight: '700',
   },
 });

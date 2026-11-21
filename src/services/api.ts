@@ -684,7 +684,12 @@ export interface OtpConfigResponse {
   input_type: 'text' | 'email' | 'tel';
 }
 
+let cachedOtpConfig: OtpConfigResponse | null = null;
+
 export async function fetchOtpConfigApi(): Promise<OtpConfigResponse | null> {
+  if (cachedOtpConfig) {
+    return cachedOtpConfig;
+  }
   try {
     const res = await fetch(`${API_BASE_URL}/platform-settings.php?action=get_otp_config`, {
       method: 'GET',
@@ -694,7 +699,8 @@ export async function fetchOtpConfigApi(): Promise<OtpConfigResponse | null> {
       const json = await res.json();
       const data = json?.data || (json?.success ? json : null);
       if (data && (json?.success || json?.status === 'success' || data?.mode)) {
-        return (json.data || data) as OtpConfigResponse;
+        cachedOtpConfig = (json.data || data) as OtpConfigResponse;
+        return cachedOtpConfig;
       }
     }
   } catch (e) {
@@ -748,12 +754,16 @@ export async function fetchPlatformFeeSettingApi(): Promise<PlatformFeeSetting> 
   };
 }
 
-export async function sendOtpApi(identity: string): Promise<{ success: boolean; message: string }> {
+export async function sendOtpApi(
+  identity: string,
+  signal?: AbortSignal
+): Promise<{ success: boolean; message: string }> {
   try {
     const res = await fetch(`${API_BASE_URL}/auth-api.php`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: `action=send_otp&identity=${encodeURIComponent(identity)}`
+      body: `action=send_otp&identity=${encodeURIComponent(identity)}`,
+      signal,
     });
 
     if (res.ok) {
@@ -764,18 +774,26 @@ export async function sendOtpApi(identity: string): Promise<{ success: boolean; 
       return { success: false, message: json.message || 'Failed to send OTP' };
     }
     return { success: false, message: 'Authentication server error. Please try again.' };
-  } catch (e) {
+  } catch (e: any) {
+    if (e?.name === 'AbortError' || signal?.aborted) {
+      return { success: false, message: 'Request cancelled.' };
+    }
     console.log('[Auth API] Send OTP error:', e);
     return { success: false, message: 'Network timeout connecting to authentication server. Please check your internet connection.' };
   }
 }
 
-export async function verifyOtpApi(identity: string, otp: string): Promise<{ success: boolean; message: string; user?: any }> {
+export async function verifyOtpApi(
+  identity: string,
+  otp: string,
+  signal?: AbortSignal
+): Promise<{ success: boolean; message: string; user?: any }> {
   try {
     const res = await fetch(`${API_BASE_URL}/auth-api.php`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: `action=verify_otp&identity=${encodeURIComponent(identity)}&otp=${encodeURIComponent(otp)}`
+      body: `action=verify_otp&identity=${encodeURIComponent(identity)}&otp=${encodeURIComponent(otp)}`,
+      signal,
     });
 
     if (res.ok) {
@@ -786,7 +804,10 @@ export async function verifyOtpApi(identity: string, otp: string): Promise<{ suc
       return { success: false, message: json.message || 'Invalid verification code' };
     }
     return { success: false, message: 'Authentication server error. Please try again.' };
-  } catch (e) {
+  } catch (e: any) {
+    if (e?.name === 'AbortError' || signal?.aborted) {
+      return { success: false, message: 'Request cancelled.' };
+    }
     console.log('[Auth API] Verify OTP error:', e);
     return { success: false, message: 'Network error communicating with authentication service.' };
   }

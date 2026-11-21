@@ -36,6 +36,7 @@ export function AuthModal({ visible, onClose, theme, activeTheme, onLoginSuccess
 
   const emailInputRef = useRef<any>(null);
   const otpInputRef = useRef<any>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   const [otpConfig, setOtpConfig] = useState<{ mode: string; label: string; placeholder: string }>({
     mode: 'both',
@@ -60,10 +61,22 @@ export function AuthModal({ visible, onClose, theme, activeTheme, onLoginSuccess
 
   useEffect(() => {
     if (visible) {
+      setLoading(false);
       setErrorMessage(null);
       loadOtpConfig();
+    } else {
+      abortControllerRef.current?.abort();
+      abortControllerRef.current = null;
+      setLoading(false);
     }
   }, [visible]);
+
+  useEffect(() => {
+    return () => {
+      abortControllerRef.current?.abort();
+      abortControllerRef.current = null;
+    };
+  }, []);
 
   useEffect(() => {
     const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
@@ -116,24 +129,57 @@ export function AuthModal({ visible, onClose, theme, activeTheme, onLoginSuccess
     return true;
   };
 
-  const handleSendOtp = async () => {
+  const handleSendOtp = () => {
     setErrorMessage(null);
     if (!validateIdentity()) {
       return;
     }
 
-    setLoading(true);
+    // Cancel any previous in-flight request
+    abortControllerRef.current?.abort();
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
+
+    const targetIdentity = identity.trim();
+
+    // 1-MILLISECOND INSTANT UI TRANSITION TO STEP 2
+    setStep('otp');
+    setLoading(false);
+
+    // Auto-focus the 6-digit OTP box smoothly
+    setTimeout(() => {
+      otpInputRef.current?.focus();
+    }, 80);
+
+    // Concurrently dispatch OTP email request in background
+    sendOtpApi(targetIdentity, controller.signal)
+      .then((res) => {
+        if (controller.signal.aborted) return;
+        if (!res.success) {
+          setErrorMessage(res.message || 'Failed to send OTP. Please check your email.');
+        }
+      })
+      .catch((e: any) => {
+        if (controller.signal.aborted) return;
+        setErrorMessage('Network error communicating with authentication service.');
+      });
+  };
+
+  const handleResendOtp = async () => {
+    setErrorMessage(null);
+    abortControllerRef.current?.abort();
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
+
     try {
-      const res = await sendOtpApi(identity.trim());
-      if (res.success) {
-        setStep('otp');
-      } else {
-        setErrorMessage(res.message || 'Failed to send OTP. Please try again.');
+      const res = await sendOtpApi(identity.trim(), controller.signal);
+      if (controller.signal.aborted) return;
+      if (!res.success) {
+        setErrorMessage(res.message || 'Failed to resend verification code.');
       }
-    } catch (e) {
-      setErrorMessage('Network error communicating with authentication service.');
-    } finally {
-      setLoading(false);
+    } catch (e: any) {
+      if (controller.signal.aborted) return;
+      setErrorMessage('Network error resending verification code.');
     }
   };
 
@@ -145,8 +191,13 @@ export function AuthModal({ visible, onClose, theme, activeTheme, onLoginSuccess
     }
 
     setLoading(true);
+    abortControllerRef.current?.abort();
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
+
     try {
-      const res = await verifyOtpApi(identity.trim(), otp.trim());
+      const res = await verifyOtpApi(identity.trim(), otp.trim(), controller.signal);
+      if (controller.signal.aborted) return;
       if (res.success) {
         const u = res.user || {};
         const fullName = [u.first_name, u.last_name].filter(Boolean).join(' ') || u.name || identity.split('@')[0] || 'Customer';
@@ -166,7 +217,8 @@ export function AuthModal({ visible, onClose, theme, activeTheme, onLoginSuccess
       } else {
         setErrorMessage(res.message || 'Invalid verification code.');
       }
-    } catch (e) {
+    } catch (e: any) {
+      if (controller.signal.aborted) return;
       setErrorMessage('Failed to verify OTP.');
     } finally {
       setLoading(false);
@@ -174,6 +226,9 @@ export function AuthModal({ visible, onClose, theme, activeTheme, onLoginSuccess
   };
 
   const handleReset = () => {
+    abortControllerRef.current?.abort();
+    abortControllerRef.current = null;
+    setLoading(false);
     setIdentity('');
     setOtp('');
     setStep('identity');
@@ -274,6 +329,19 @@ export function AuthModal({ visible, onClose, theme, activeTheme, onLoginSuccess
                     </Text>
                   )}
                 </View>
+
+                {/* Instant Verification Code Sent Banner */}
+                {step === 'otp' && (
+                  <View style={[styles.successBanner, keyboardVisible && styles.successBannerCompact]}>
+                    <MaterialCommunityIcons name="email-check-outline" size={keyboardVisible ? 16 : 18} color="#30D158" style={{ marginRight: 8 }} />
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.successBannerTitle}>Verification code sent!</Text>
+                      <Text style={[styles.successBannerSubtitle, { color: activeTheme.textSecondary }]} numberOfLines={1}>
+                        Check your inbox for {identity.trim()}
+                      </Text>
+                    </View>
+                  </View>
+                )}
 
                 {/* Error Banner (shown during OTP step) */}
                 {errorMessage && step === 'otp' && (
@@ -421,13 +489,13 @@ export function AuthModal({ visible, onClose, theme, activeTheme, onLoginSuccess
                     </TouchableOpacity>
 
                     <View style={[styles.otpFooterRow, keyboardVisible && { marginTop: 8 }]}>
-                      <TouchableOpacity onPress={() => setStep('identity')}>
+                      <TouchableOpacity onPress={() => { setErrorMessage(null); setStep('identity'); }}>
                         <Text style={[styles.changeIdentityText, { color: activeTheme.textSecondary }]}>
                           Change Phone / Email
                         </Text>
                       </TouchableOpacity>
 
-                      <TouchableOpacity onPress={handleSendOtp}>
+                      <TouchableOpacity onPress={handleResendOtp}>
                         <Text style={[styles.resendText, { color: '#0084FF' }]}>
                           Resend Code
                         </Text>
@@ -558,6 +626,33 @@ const styles = StyleSheet.create({
     fontSize: 11,
     lineHeight: 14,
     paddingHorizontal: 6,
+  },
+  successBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(48, 209, 88, 0.12)',
+    borderWidth: 1,
+    borderColor: 'rgba(48, 209, 88, 0.35)',
+    borderRadius: 12,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    marginBottom: 12,
+  },
+  successBannerCompact: {
+    paddingVertical: 7,
+    paddingHorizontal: 10,
+    marginBottom: 8,
+  },
+  successBannerTitle: {
+    color: '#30D158',
+    fontSize: 12,
+    fontWeight: '800',
+    letterSpacing: 0.2,
+  },
+  successBannerSubtitle: {
+    fontSize: 11,
+    marginTop: 1,
+    fontWeight: '500',
   },
   errorBox: {
     flexDirection: 'row',

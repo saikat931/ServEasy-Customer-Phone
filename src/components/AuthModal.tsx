@@ -1,16 +1,18 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   StyleSheet,
   Text,
   View,
   TouchableOpacity,
+  TouchableWithoutFeedback,
   TextInput,
   Modal,
   Image,
   ActivityIndicator,
   Platform,
   Keyboard,
-  LayoutChangeEvent,
+  ScrollView,
+  KeyboardAvoidingView,
 } from 'react-native';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { GlassCard } from './GlassCard';
@@ -32,24 +34,9 @@ export function AuthModal({ visible, onClose, theme, activeTheme, onLoginSuccess
   const [devOtp, setDevOtp] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [keyboardVisible, setKeyboardVisible] = useState(false);
-  const [keyboardHeight, setKeyboardHeight] = useState(0);
-  const [containerHeight, setContainerHeight] = useState(0);
-  const [initialHeight, setInitialHeight] = useState(0);
 
-  const onLayoutOverlay = (e: LayoutChangeEvent) => {
-    const h = e.nativeEvent.layout.height;
-    if (h > 0) {
-      setContainerHeight(h);
-      if (!initialHeight || (!keyboardVisible && h > initialHeight)) {
-        setInitialHeight(h);
-      }
-    }
-  };
-
-  const isWindowResized = initialHeight > 0 && containerHeight > 0 && containerHeight < initialHeight - 100;
-  const bottomPadding = keyboardVisible
-    ? (isWindowResized ? 30 : (keyboardHeight > 0 ? keyboardHeight : 290) + 30)
-    : 0;
+  const emailInputRef = useRef<any>(null);
+  const otpInputRef = useRef<any>(null);
 
   const [otpConfig, setOtpConfig] = useState<{ mode: string; label: string; placeholder: string }>({
     mode: 'both',
@@ -82,15 +69,11 @@ export function AuthModal({ visible, onClose, theme, activeTheme, onLoginSuccess
   useEffect(() => {
     const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
     const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
-    const showSub = Keyboard.addListener(showEvent, (e) => {
+    const showSub = Keyboard.addListener(showEvent, () => {
       setKeyboardVisible(true);
-      if (e && e.endCoordinates && e.endCoordinates.height) {
-        setKeyboardHeight(e.endCoordinates.height);
-      }
     });
     const hideSub = Keyboard.addListener(hideEvent, () => {
       setKeyboardVisible(false);
-      setKeyboardHeight(0);
     });
     return () => {
       showSub.remove();
@@ -215,18 +198,11 @@ export function AuthModal({ visible, onClose, theme, activeTheme, onLoginSuccess
         }
       }}
     >
-      <View
-        onLayout={onLayoutOverlay}
-        style={[
-          styles.modalOverlay,
-          keyboardVisible ? styles.modalOverlayWithKeyboard : styles.modalOverlayCentered,
-          keyboardVisible && { paddingBottom: bottomPadding },
-        ]}
-      >
-        {/* Backdrop tap to dismiss keyboard or close modal */}
-        <TouchableOpacity
-          activeOpacity={1}
-          style={StyleSheet.absoluteFill}
+      <View style={styles.modalRoot}>
+        {/* Full-screen Dark Backdrop Layer:
+            - If keyboard is open: tapping dark background ONLY dismisses keyboard. Modal stays open!
+            - If keyboard is closed: tapping dark background closes modal. */}
+        <TouchableWithoutFeedback
           onPress={() => {
             if (keyboardVisible) {
               Keyboard.dismiss();
@@ -235,233 +211,305 @@ export function AuthModal({ visible, onClose, theme, activeTheme, onLoginSuccess
               onClose();
             }
           }}
-        />
-
-        <GlassCard
-          theme={theme}
-          style={styles.modalCard}
-          intensity={activeTheme.glassIntensity + 15}
         >
-          {/* Close button */}
-          <TouchableOpacity
-            style={[styles.closeBtn, { backgroundColor: activeTheme.pillInactiveBg }]}
-            onPress={() => {
-              handleReset();
-              onClose();
-            }}
+          <View style={styles.backdropOverlay} />
+        </TouchableWithoutFeedback>
+
+        {/* KeyboardAvoidingView handles window offset and keyboard height smoothly */}
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'padding'}
+          style={styles.keyboardAvoidingContainer}
+          pointerEvents="box-none"
+        >
+          <ScrollView
+            contentContainerStyle={[
+              styles.scrollContentContainer,
+              keyboardVisible ? styles.scrollContentWithKeyboard : styles.scrollContentCentered,
+              keyboardVisible && { paddingBottom: 30 },
+            ]}
+            keyboardShouldPersistTaps="handled"
+            bounces={false}
+            showsVerticalScrollIndicator={false}
+            pointerEvents="box-none"
           >
-            <MaterialCommunityIcons name="close" size={18} color={activeTheme.textPrimary} />
-          </TouchableOpacity>
-
-          {/* Logo & Headline */}
-          <View style={styles.headerBox}>
-            <Image
-              source={require('../../assets/logo.png')}
-              style={styles.logoImage}
-            />
-            <Text style={[styles.title, { color: activeTheme.textPrimary }]}>
-              {step === 'identity' ? 'Sign In / Register' : 'Verify Security Code'}
-            </Text>
-            <Text style={[styles.subtitle, { color: activeTheme.textSecondary }]}>
-              {step === 'identity'
-                ? 'Enter your phone number or email to receive a secure OTP code.'
-                : `We sent a 6-digit verification code to ${identity}`}
-            </Text>
-          </View>
-
-          {/* Error Banner (shown during OTP step) */}
-          {errorMessage && step === 'otp' && (
-            <View style={styles.errorBox}>
-              <MaterialCommunityIcons name="alert-circle-outline" size={15} color="#FF3B30" style={{ marginRight: 6 }} />
-              <Text style={styles.errorText}>{errorMessage}</Text>
-            </View>
-          )}
-
-          {/* Login OTP Pill */}
-          {devOtp && step === 'otp' && (
-            <View style={styles.devOtpBox}>
-              <MaterialCommunityIcons name="shield-check" size={15} color="#30D158" style={{ marginRight: 6 }} />
-              <Text style={styles.devOtpText}>Login OTP Code: <Text style={{ fontWeight: '900' }}>{devOtp}</Text></Text>
-            </View>
-          )}
-
-          {step === 'identity' ? (
-            /* STEP 1: Phone / Email */
-            <View style={styles.formContent}>
-              <Text style={[styles.inputLabel, { color: activeTheme.textSecondary }]}>
-                {otpConfig.label}
-              </Text>
-              <View
-                style={[
-                  styles.inputContainer,
-                  {
-                    backgroundColor: activeTheme.inputBg,
-                    borderColor: errorMessage ? '#e74c3c' : activeTheme.cardBorder,
-                    marginBottom: errorMessage ? 6 : 14,
-                  },
-                ]}
+            {/* Modal Card Touch Container:
+                onStartShouldSetResponder={() => true} ensures touches INSIDE the card NEVER pass to backdrop */}
+            <View
+              style={[styles.modalCardWrapper, keyboardVisible && styles.modalCardWrapperCompact]}
+              onStartShouldSetResponder={() => true}
+              onTouchEnd={(e) => {
+                if (e && e.stopPropagation) {
+                  e.stopPropagation();
+                }
+              }}
+            >
+              <GlassCard
+                theme={theme}
+                style={[styles.modalCard, keyboardVisible && styles.modalCardCompact]}
+                intensity={activeTheme.glassIntensity + 15}
               >
-                <MaterialCommunityIcons
-                  name={otpConfig.mode === 'phone' ? 'phone' : (otpConfig.mode === 'email' ? 'email-outline' : 'account-circle-outline')}
-                  size={20}
-                  color={errorMessage ? '#e74c3c' : activeTheme.iconColor}
-                  style={{ marginRight: 10 }}
-                />
-                <TextInput
-                  style={[styles.textInput, { color: activeTheme.textPrimary }]}
-                  placeholder={otpConfig.placeholder}
-                  placeholderTextColor={activeTheme.textSecondary}
-                  value={identity}
-                  onChangeText={(val) => {
-                    setIdentity(val);
-                    const clean = val.trim();
-                    if (!clean) {
-                      setErrorMessage(null);
-                      return;
-                    }
-                    if (otpConfig.mode === 'email') {
-                      const cleanPhone = clean.replace(/[\s\-+]/g, '');
-                      if (/^\d+$/.test(cleanPhone)) {
-                        setErrorMessage('Phone number login is closed. Please enter your email.');
-                      } else {
-                        setErrorMessage(null);
-                      }
-                    } else if (otpConfig.mode === 'phone') {
-                      if (clean.includes('@')) {
-                        setErrorMessage('Email login is closed. Please enter your phone number.');
-                      } else {
-                        setErrorMessage(null);
-                      }
-                    } else {
-                      setErrorMessage(null);
-                    }
+                {/* Close button */}
+                <TouchableOpacity
+                  style={[styles.closeBtn, keyboardVisible && styles.closeBtnCompact, { backgroundColor: activeTheme.pillInactiveBg }]}
+                  onPress={() => {
+                    handleReset();
+                    onClose();
                   }}
-                  keyboardType={otpConfig.mode === 'phone' ? 'phone-pad' : (otpConfig.mode === 'email' ? 'email-address' : 'default')}
-                  autoCapitalize="none"
-                />
-              </View>
-
-              {/* Status / Error Text ONLY displayed when user enters an invalid number/input */}
-              {errorMessage ? (
-                <Text style={styles.fieldErrorText}>{errorMessage}</Text>
-              ) : null}
-
-              <TouchableOpacity
-                style={[
-                  styles.actionBtn,
-                  { backgroundColor: activeTheme.accentBtnBg },
-                  loading && { opacity: 0.7 },
-                ]}
-                onPress={handleSendOtp}
-                disabled={loading}
-              >
-                {loading ? (
-                  <ActivityIndicator color="#FFFFFF" size="small" />
-                ) : (
-                  <>
-                    <Text style={styles.actionBtnText}>SEND OTP CODE</Text>
-                    <MaterialCommunityIcons name="arrow-right" size={16} color="#FFFFFF" style={{ marginLeft: 6 }} />
-                  </>
-                )}
-              </TouchableOpacity>
-            </View>
-          ) : (
-            /* STEP 2: 6-Digit OTP */
-            <View style={styles.formContent}>
-              <Text style={[styles.inputLabel, { color: activeTheme.textSecondary }]}>
-                ENTER 6-DIGIT VERIFICATION CODE
-              </Text>
-              <View
-                style={[
-                  styles.inputContainer,
-                  {
-                    backgroundColor: activeTheme.inputBg,
-                    borderColor: activeTheme.cardBorder,
-                    marginBottom: 14,
-                  },
-                ]}
-              >
-                <MaterialCommunityIcons name="shield-key-outline" size={20} color={activeTheme.iconColor} style={{ marginRight: 10 }} />
-                <TextInput
-                  style={[styles.textInput, { color: activeTheme.textPrimary, letterSpacing: 4, fontWeight: '800' }]}
-                  placeholder="000000"
-                  placeholderTextColor={activeTheme.textSecondary}
-                  value={otp}
-                  onChangeText={setOtp}
-                  keyboardType="number-pad"
-                  maxLength={6}
-                />
-              </View>
-
-              <TouchableOpacity
-                style={[
-                  styles.actionBtn,
-                  { backgroundColor: '#30D158' },
-                  loading && { opacity: 0.7 },
-                ]}
-                onPress={handleVerifyOtp}
-                disabled={loading}
-              >
-                {loading ? (
-                  <ActivityIndicator color="#FFFFFF" size="small" />
-                ) : (
-                  <>
-                    <Text style={styles.actionBtnText}>VERIFY & LOGIN</Text>
-                    <MaterialCommunityIcons name="check-circle-outline" size={16} color="#FFFFFF" style={{ marginLeft: 6 }} />
-                  </>
-                )}
-              </TouchableOpacity>
-
-              <View style={styles.otpFooterRow}>
-                <TouchableOpacity onPress={() => setStep('identity')}>
-                  <Text style={[styles.changeIdentityText, { color: activeTheme.textSecondary }]}>
-                    Change Phone / Email
-                  </Text>
+                  hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+                >
+                  <MaterialCommunityIcons name="close" size={keyboardVisible ? 16 : 18} color={activeTheme.textPrimary} />
                 </TouchableOpacity>
 
-                <TouchableOpacity onPress={handleSendOtp}>
-                  <Text style={[styles.resendText, { color: '#0084FF' }]}>
-                    Resend Code
+                {/* Logo & Headline */}
+                <View style={[styles.headerBox, keyboardVisible && styles.headerBoxCompact]}>
+                  <Image
+                    source={require('../../assets/logo.png')}
+                    style={[styles.logoImage, keyboardVisible && styles.logoImageCompact]}
+                  />
+                  <Text style={[styles.title, keyboardVisible && styles.titleCompact, { color: activeTheme.textPrimary }]}>
+                    {step === 'identity' ? 'Sign In / Register' : 'Verify Security Code'}
                   </Text>
-                </TouchableOpacity>
-              </View>
-
-              {identity.includes('@') && (
-                <View style={styles.spamTipRow}>
-                  <MaterialCommunityIcons name="information-outline" size={13} color={activeTheme.textSecondary} style={{ marginRight: 4 }} />
-                  <Text style={[styles.spamTipText, { color: activeTheme.textSecondary }]}>
-                    Can't find the email? Check your Spam or Promotions folder.
-                  </Text>
+                  {(!keyboardVisible || step === 'otp') && (
+                    <Text style={[styles.subtitle, keyboardVisible && styles.subtitleCompact, { color: activeTheme.textSecondary }]}>
+                      {step === 'identity'
+                        ? 'Enter your phone number or email to receive a secure OTP code.'
+                        : `We sent a 6-digit verification code to ${identity}`}
+                    </Text>
+                  )}
                 </View>
-              )}
+
+                {/* Error Banner (shown during OTP step) */}
+                {errorMessage && step === 'otp' && (
+                  <View style={styles.errorBox}>
+                    <MaterialCommunityIcons name="alert-circle-outline" size={15} color="#FF3B30" style={{ marginRight: 6 }} />
+                    <Text style={styles.errorText}>{errorMessage}</Text>
+                  </View>
+                )}
+
+                {/* Login OTP Pill */}
+                {devOtp && step === 'otp' && (
+                  <View style={styles.devOtpBox}>
+                    <MaterialCommunityIcons name="shield-check" size={15} color="#30D158" style={{ marginRight: 6 }} />
+                    <Text style={styles.devOtpText}>Login OTP Code: <Text style={{ fontWeight: '900' }}>{devOtp}</Text></Text>
+                  </View>
+                )}
+
+                {step === 'identity' ? (
+                  /* STEP 1: Phone / Email */
+                  <View style={styles.formContent}>
+                    <Text style={[styles.inputLabel, { color: activeTheme.textSecondary }]}>
+                      {otpConfig.label}
+                    </Text>
+                    <TouchableOpacity
+                      activeOpacity={1}
+                      onPress={() => emailInputRef.current?.focus()}
+                      style={[
+                        styles.inputContainer,
+                        keyboardVisible && styles.inputContainerCompact,
+                        {
+                          backgroundColor: activeTheme.inputBg,
+                          borderColor: errorMessage ? '#e74c3c' : activeTheme.cardBorder,
+                          marginBottom: errorMessage ? 6 : (keyboardVisible ? 10 : 14),
+                        },
+                      ]}
+                    >
+                      <MaterialCommunityIcons
+                        name={otpConfig.mode === 'phone' ? 'phone' : (otpConfig.mode === 'email' ? 'email-outline' : 'account-circle-outline')}
+                        size={keyboardVisible ? 18 : 20}
+                        color={errorMessage ? '#e74c3c' : activeTheme.iconColor}
+                        style={{ marginRight: 8 }}
+                      />
+                      <TextInput
+                        ref={emailInputRef}
+                        style={[styles.textInput, { color: activeTheme.textPrimary }]}
+                        placeholder={otpConfig.placeholder}
+                        placeholderTextColor={activeTheme.textSecondary}
+                        value={identity}
+                        onChangeText={(val) => {
+                          setIdentity(val);
+                          const clean = val.trim();
+                          if (!clean) {
+                            setErrorMessage(null);
+                            return;
+                          }
+                          if (otpConfig.mode === 'email') {
+                            const cleanPhone = clean.replace(/[\s\-+]/g, '');
+                            if (/^\d+$/.test(cleanPhone)) {
+                              setErrorMessage('Phone number login is closed. Please enter your email.');
+                            } else {
+                              setErrorMessage(null);
+                            }
+                          } else if (otpConfig.mode === 'phone') {
+                            if (clean.includes('@')) {
+                              setErrorMessage('Email login is closed. Please enter your phone number.');
+                            } else {
+                              setErrorMessage(null);
+                            }
+                          } else {
+                            setErrorMessage(null);
+                          }
+                        }}
+                        keyboardType={otpConfig.mode === 'phone' ? 'phone-pad' : (otpConfig.mode === 'email' ? 'email-address' : 'default')}
+                        autoCapitalize="none"
+                      />
+                    </TouchableOpacity>
+
+                    {/* Status / Error Text ONLY displayed when user enters an invalid number/input */}
+                    {errorMessage ? (
+                      <Text style={styles.fieldErrorText}>{errorMessage}</Text>
+                    ) : null}
+
+                    <TouchableOpacity
+                      style={[
+                        styles.actionBtn,
+                        keyboardVisible && styles.actionBtnCompact,
+                        { backgroundColor: activeTheme.accentBtnBg },
+                        loading && { opacity: 0.7 },
+                      ]}
+                      onPress={handleSendOtp}
+                      disabled={loading}
+                    >
+                      {loading ? (
+                        <ActivityIndicator color="#FFFFFF" size="small" />
+                      ) : (
+                        <>
+                          <Text style={styles.actionBtnText}>SEND OTP CODE</Text>
+                          <MaterialCommunityIcons name="arrow-right" size={16} color="#FFFFFF" style={{ marginLeft: 6 }} />
+                        </>
+                      )}
+                    </TouchableOpacity>
+                  </View>
+                ) : (
+                  /* STEP 2: 6-Digit OTP */
+                  <View style={styles.formContent}>
+                    <Text style={[styles.inputLabel, { color: activeTheme.textSecondary }]}>
+                      ENTER 6-DIGIT VERIFICATION CODE
+                    </Text>
+                    <TouchableOpacity
+                      activeOpacity={1}
+                      onPress={() => otpInputRef.current?.focus()}
+                      style={[
+                        styles.inputContainer,
+                        keyboardVisible && styles.inputContainerCompact,
+                        {
+                          backgroundColor: activeTheme.inputBg,
+                          borderColor: activeTheme.cardBorder,
+                          marginBottom: keyboardVisible ? 10 : 14,
+                        },
+                      ]}
+                    >
+                      <MaterialCommunityIcons name="shield-key-outline" size={keyboardVisible ? 18 : 20} color={activeTheme.iconColor} style={{ marginRight: 8 }} />
+                      <TextInput
+                        ref={otpInputRef}
+                        style={[styles.textInput, { color: activeTheme.textPrimary, letterSpacing: 4, fontWeight: '800' }]}
+                        placeholder="000000"
+                        placeholderTextColor={activeTheme.textSecondary}
+                        value={otp}
+                        onChangeText={setOtp}
+                        keyboardType="number-pad"
+                        maxLength={6}
+                      />
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                      style={[
+                        styles.actionBtn,
+                        keyboardVisible && styles.actionBtnCompact,
+                        { backgroundColor: '#30D158' },
+                        loading && { opacity: 0.7 },
+                      ]}
+                      onPress={handleVerifyOtp}
+                      disabled={loading}
+                    >
+                      {loading ? (
+                        <ActivityIndicator color="#FFFFFF" size="small" />
+                      ) : (
+                        <>
+                          <Text style={styles.actionBtnText}>VERIFY & LOGIN</Text>
+                          <MaterialCommunityIcons name="check-circle-outline" size={16} color="#FFFFFF" style={{ marginLeft: 6 }} />
+                        </>
+                      )}
+                    </TouchableOpacity>
+
+                    <View style={[styles.otpFooterRow, keyboardVisible && { marginTop: 8 }]}>
+                      <TouchableOpacity onPress={() => setStep('identity')}>
+                        <Text style={[styles.changeIdentityText, { color: activeTheme.textSecondary }]}>
+                          Change Phone / Email
+                        </Text>
+                      </TouchableOpacity>
+
+                      <TouchableOpacity onPress={handleSendOtp}>
+                        <Text style={[styles.resendText, { color: '#0084FF' }]}>
+                          Resend Code
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
+
+                    {identity.includes('@') && !keyboardVisible && (
+                      <View style={styles.spamTipRow}>
+                        <MaterialCommunityIcons name="information-outline" size={13} color={activeTheme.textSecondary} style={{ marginRight: 4 }} />
+                        <Text style={[styles.spamTipText, { color: activeTheme.textSecondary }]}>
+                          Can't find the email? Check your Spam or Promotions folder.
+                        </Text>
+                      </View>
+                    )}
+                  </View>
+                )}
+              </GlassCard>
             </View>
-          )}
-        </GlassCard>
+          </ScrollView>
+        </KeyboardAvoidingView>
       </View>
     </Modal>
   );
 }
 
 const styles = StyleSheet.create({
-  modalOverlay: {
+  modalRoot: {
     flex: 1,
+    position: 'relative',
+  },
+  backdropOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
     backgroundColor: 'rgba(0, 0, 0, 0.75)',
+  },
+  keyboardAvoidingContainer: {
+    flex: 1,
+    width: '100%',
+  },
+  scrollContentContainer: {
+    flexGrow: 1,
     alignItems: 'center',
     paddingHorizontal: 20,
   },
-  modalOverlayCentered: {
+  scrollContentCentered: {
     justifyContent: 'center',
   },
-  modalOverlayWithKeyboard: {
+  scrollContentWithKeyboard: {
     justifyContent: 'flex-end',
+  },
+  modalCardWrapper: {
+    width: '100%',
+    maxWidth: 380,
+  },
+  modalCardWrapperCompact: {
+    maxWidth: 380,
   },
   modalCard: {
     width: '100%',
-    maxWidth: 380,
     borderRadius: 22,
     borderWidth: 1,
     padding: 20,
     position: 'relative',
+  },
+  modalCardCompact: {
+    padding: 16,
+    paddingTop: 14,
+    borderRadius: 18,
   },
   closeBtn: {
     position: 'absolute',
@@ -474,10 +522,21 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     zIndex: 10,
   },
+  closeBtnCompact: {
+    top: 10,
+    right: 10,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+  },
   headerBox: {
     alignItems: 'center',
     marginBottom: 14,
     marginTop: 4,
+  },
+  headerBoxCompact: {
+    marginBottom: 8,
+    marginTop: 0,
   },
   logoImage: {
     width: 110,
@@ -485,17 +544,31 @@ const styles = StyleSheet.create({
     resizeMode: 'contain',
     marginBottom: 8,
   },
+  logoImageCompact: {
+    width: 85,
+    height: 24,
+    marginBottom: 4,
+  },
   title: {
     fontSize: 18,
     fontWeight: '800',
     marginBottom: 4,
     textAlign: 'center',
   },
+  titleCompact: {
+    fontSize: 15,
+    marginBottom: 2,
+  },
   subtitle: {
     fontSize: 12,
     lineHeight: 16,
     textAlign: 'center',
     paddingHorizontal: 8,
+  },
+  subtitleCompact: {
+    fontSize: 11,
+    lineHeight: 14,
+    paddingHorizontal: 6,
   },
   errorBox: {
     flexDirection: 'row',
@@ -546,6 +619,11 @@ const styles = StyleSheet.create({
     height: 48,
     marginBottom: 14,
   },
+  inputContainerCompact: {
+    height: 44,
+    marginBottom: 10,
+    paddingHorizontal: 10,
+  },
   textInput: {
     flex: 1,
     fontSize: 14,
@@ -565,6 +643,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     height: 48,
     borderRadius: 12,
+  },
+  actionBtnCompact: {
+    height: 44,
   },
   actionBtnText: {
     color: '#FFFFFF',

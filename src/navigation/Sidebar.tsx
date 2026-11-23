@@ -13,6 +13,7 @@ import {
   ScrollView,
   Platform
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { GlassCard } from '../components/GlassCard';
 
@@ -68,6 +69,7 @@ export function Sidebar({
   onNavigateToBookings,
   onNavigateToAccount
 }: SidebarProps) {
+  const insets = useSafeAreaInsets();
   const isLoggedIn = currentUser?.isLoggedIn ?? false;
   const userName = currentUser?.name && currentUser.name !== 'Guest User' ? currentUser.name : (isLoggedIn ? 'Verified Member' : 'Guest User');
   const userIdentity = currentUser?.identity || currentUser?.phone || currentUser?.email || '';
@@ -191,14 +193,34 @@ export function Sidebar({
       onRequestClose={onClose}
     >
       <View style={styles.modalBackdrop}>
-        {/* Click outside backdrop to close */}
+        {/* Fullscreen touchable backdrop to dismiss */}
         <TouchableWithoutFeedback onPress={onClose}>
-          <View style={styles.dismissOverlay} />
+          <View style={StyleSheet.absoluteFill} />
         </TouchableWithoutFeedback>
 
-        {/* Sidebar Drawer Card */}
-        <View style={styles.sidebarPanelWrapper}>
-          <GlassCard theme={theme} style={styles.sidebarPanel} intensity={activeTheme.glassIntensity}>
+        {/* Sidebar Drawer Card positioned strictly within safe area */}
+        <View
+          style={[
+            styles.sidebarPanelWrapper,
+            {
+              top: insets.top,
+              bottom: insets.bottom,
+              right: insets.right,
+            },
+          ]}
+          onStartShouldSetResponder={() => true}
+        >
+          <GlassCard
+            theme={theme}
+            style={[
+              styles.sidebarPanel,
+              {
+                borderTopRightRadius: insets.top > 0 ? 20 : 0,
+                borderBottomRightRadius: insets.bottom > 0 ? 20 : 0,
+              },
+            ]}
+            intensity={activeTheme.glassIntensity}
+          >
             {/* Header */}
             <View style={[styles.sidebarHeader, { borderBottomColor: activeTheme.cardBorder }]}>
               <View style={styles.brandRow}>
@@ -367,15 +389,14 @@ export function Sidebar({
 const styles = StyleSheet.create({
   modalBackdrop: {
     flex: 1,
-    flexDirection: 'row',
     backgroundColor: 'rgba(0, 0, 0, 0.65)',
   },
   dismissOverlay: {
     flex: 1,
   },
   sidebarPanelWrapper: {
+    position: 'absolute',
     width: SIDEBAR_WIDTH,
-    height: '100%',
   },
   sidebarPanel: {
     flex: 1,
@@ -384,9 +405,9 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 0,
     borderBottomRightRadius: 0,
     borderLeftWidth: 1,
-    paddingTop: Platform.OS === 'ios' ? 48 : 24,
+    paddingTop: 16,
     paddingHorizontal: 18,
-    paddingBottom: 20,
+    paddingBottom: 16,
   },
   sidebarHeader: {
     flexDirection: 'row',

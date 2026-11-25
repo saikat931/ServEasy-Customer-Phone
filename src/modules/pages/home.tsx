@@ -46,6 +46,7 @@ import { AuthModal } from '../../components/AuthModal';
 import { LogoutModal } from '../../components/LogoutModal';
 import { ServerConnectionModal } from '../../components/ServerConnectionModal';
 import { NotificationBanner } from '../../components/NotificationBanner';
+import { ProudMadeInIndiaFooter } from '../../components/ProudMadeInIndiaFooter';
 import {
   isCatalogCacheWarm,
   fetchCategoriesFromApi,
@@ -3287,150 +3288,9 @@ const HomeFeed = React.memo(function HomeFeed({
       </View>
 
       {/* ══════════════════════════════════════════════════════════════════════ */}
-      {/* 4. FOOTER CONTAINER (Matching Web footer.php & newsletter)             */}
+      {/* 4. FOOTER: PROUDLY MADE IN INDIA BY S.S.R (With Monument Architecture) */}
       {/* ══════════════════════════════════════════════════════════════════════ */}
-      <GlassCard
-        theme={theme}
-        style={[styles.webFooterContainer, { borderColor: activeTheme.cardBorder }]}
-        intensity={activeTheme.glassIntensity}
-      >
-        {/* Promotional announcement pill */}
-        <View style={styles.footerPromoPill}>
-          <MaterialCommunityIcons name="tag-outline" size={14} color="#30D158" />
-          <Text style={styles.footerPromoText}>Free shipping for all order of $105</Text>
-        </View>
-
-        {/* Brand Header */}
-        <View style={styles.footerBrandRow}>
-          <TouchableOpacity activeOpacity={0.7} onPress={onLogoPress}>
-            <Image source={require('../../../assets/logo.png')} style={styles.footerLogo} />
-          </TouchableOpacity>
-          <Text style={[styles.footerBrandDesc, { color: activeTheme.textSecondary }]}>
-            From mechanical care and private room booking to professional personal assistance, emergency help, and logistics. Book trusted services instantly with transparent booking.
-          </Text>
-        </View>
-
-        {/* Interactive Newsletter Card */}
-        <View style={[styles.newsletterCard, { backgroundColor: activeTheme.inputBg, borderColor: activeTheme.cardBorder }]}>
-          <View style={styles.newsletterIconHeader}>
-            <MaterialCommunityIcons name="email-fast-outline" size={20} color="#0084FF" />
-            <Text style={[styles.newsletterHeading, { color: activeTheme.textPrimary }]}>
-              Subscribe to ServEasy Concierge
-            </Text>
-          </View>
-          <Text style={[styles.newsletterDesc, { color: activeTheme.textSecondary }]}>
-            Get exclusive seasonal discounts, car maintenance tips, and priority booking alerts.
-          </Text>
-
-          {newsletterSubscribed ? (
-            <View style={styles.newsletterSuccessBox}>
-              <MaterialCommunityIcons name="check-circle" size={16} color="#30D158" style={{ marginRight: 6 }} />
-              <Text style={styles.newsletterSuccessText}>Subscribed! You are now on the VIP list.</Text>
-            </View>
-          ) : (
-            <View style={styles.newsletterInputRow}>
-              <TextInput
-                style={[styles.newsletterInput, { color: activeTheme.textPrimary, borderColor: activeTheme.cardBorder, backgroundColor: activeTheme.modalBg }]}
-                placeholder="Enter your email..."
-                placeholderTextColor={activeTheme.textSecondary}
-                value={newsletterEmail}
-                onChangeText={setNewsletterEmail}
-                keyboardType="email-address"
-                autoCapitalize="none"
-              />
-              <TouchableOpacity
-                style={[styles.newsletterBtn, { backgroundColor: activeTheme.accentBtnBg }]}
-                onPress={() => {
-                  if (newsletterEmail.includes('@') && newsletterEmail.includes('.')) {
-                    setNewsletterSubscribed(true);
-                    Alert.alert('Subscribed!', 'Thank you for subscribing to ServEasy insights and special offers.');
-                  } else {
-                    Alert.alert('Invalid Email', 'Please enter a valid email address.');
-                  }
-                }}
-              >
-                <Text style={styles.newsletterBtnText}>JOIN</Text>
-              </TouchableOpacity>
-            </View>
-          )}
-        </View>
-
-        {/* Quick Navigation Links Grid */}
-        <View style={styles.footerLinksGrid}>
-          <View style={styles.footerCol}>
-            <Text style={[styles.footerColTitle, { color: activeTheme.textPrimary }]}>PLATFORM</Text>
-            <TouchableOpacity onPress={() => onNavigateTab?.('services')} style={styles.footerLinkTouch}>
-              <Text style={[styles.footerLinkText, { color: activeTheme.textSecondary }]}>All Services (50+)</Text>
-            </TouchableOpacity>
-            <TouchableOpacity onPress={() => onNavigateToVehicleWash?.('Car')} style={styles.footerLinkTouch}>
-              <Text style={[styles.footerLinkText, { color: activeTheme.textSecondary }]}>Car & Bike Wash</Text>
-            </TouchableOpacity>
-            <TouchableOpacity onPress={onNavigateToMaids} style={styles.footerLinkTouch}>
-              <Text style={[styles.footerLinkText, { color: activeTheme.textSecondary }]}>Maids & Personal Staff</Text>
-            </TouchableOpacity>
-            <TouchableOpacity onPress={() => onNavigateToListing('all', 'domains')} style={styles.footerLinkTouch}>
-              <Text style={[styles.footerLinkText, { color: activeTheme.textSecondary }]}>Service Domains (7)</Text>
-            </TouchableOpacity>
-            <TouchableOpacity onPress={onNavigateToWishlist} style={styles.footerLinkTouch}>
-              <Text style={[styles.footerLinkText, { color: activeTheme.textSecondary }]}>Favourites & Saved</Text>
-            </TouchableOpacity>
-          </View>
-
-          <View style={styles.footerCol}>
-            <Text style={[styles.footerColTitle, { color: activeTheme.textPrimary }]}>COMPANY</Text>
-            <TouchableOpacity onPress={onOpenAbout} style={styles.footerLinkTouch}>
-              <Text style={[styles.footerLinkText, { color: activeTheme.textSecondary }]}>About ServEasy</Text>
-            </TouchableOpacity>
-            <TouchableOpacity onPress={onNavigateToBlog} style={styles.footerLinkTouch}>
-              <Text style={[styles.footerLinkText, { color: activeTheme.textSecondary }]}>Blog & Guides</Text>
-            </TouchableOpacity>
-            <TouchableOpacity onPress={onNavigateToContact} style={styles.footerLinkTouch}>
-              <Text style={[styles.footerLinkText, { color: activeTheme.textSecondary }]}>Contact Concierge</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-
-        {/* Contact Info Row */}
-        <View style={[styles.footerContactInfo, { borderTopColor: activeTheme.cardBorder }]}>
-          <TouchableOpacity onPress={() => Linking.openURL('tel:+18004928172')} style={styles.contactItemTouch}>
-            <MaterialCommunityIcons name="phone" size={15} color="#30D158" />
-            <Text style={[styles.contactItemText, { color: activeTheme.textSecondary }]}>+1 (800) 492-8172</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity onPress={() => Linking.openURL('mailto:concierge@serveasy.com')} style={styles.contactItemTouch}>
-            <MaterialCommunityIcons name="email-outline" size={15} color="#0084FF" />
-            <Text style={[styles.contactItemText, { color: activeTheme.textSecondary }]}>concierge@serveasy.com</Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* Social channels row */}
-        <View style={styles.footerSocialRow}>
-          {[
-            { icon: 'twitter', label: 'Twitter / X', url: 'https://twitter.com' },
-            { icon: 'facebook', label: 'Facebook', url: 'https://facebook.com' },
-            { icon: 'instagram', label: 'Instagram', url: 'https://instagram.com' },
-            { icon: 'linkedin', label: 'LinkedIn', url: 'https://linkedin.com' },
-          ].map((s, idx) => (
-            <TouchableOpacity
-              key={idx}
-              style={[styles.socialIconBtn, { backgroundColor: activeTheme.inputBg, borderColor: activeTheme.cardBorder }]}
-              onPress={() => Linking.openURL(s.url).catch(() => {})}
-            >
-              <MaterialCommunityIcons name={s.icon as any} size={16} color={activeTheme.iconColor} />
-            </TouchableOpacity>
-          ))}
-        </View>
-
-        {/* Bottom copyright & terms */}
-        <View style={[styles.footerBottomBox, { borderTopColor: activeTheme.cardBorder }]}>
-          <Text style={[styles.footerCopyrightText, { color: activeTheme.textSecondary }]}>
-            © 2026 ServEasy Inc. All Rights Reserved.
-          </Text>
-          <Text style={[styles.footerTermsText, { color: activeTheme.textSecondary }]}>
-            Privacy Policy • Terms of Service • Trust & Safety
-          </Text>
-        </View>
-      </GlassCard>
+      <ProudMadeInIndiaFooter theme={theme} />
     </ScrollView>
   );
 }, (prevProps: HomeFeedProps, nextProps: HomeFeedProps) => {

@@ -1263,7 +1263,8 @@ export async function saveProfileAddressApi(userId: number, address: {
 export async function fetchVehicleWashProvidersFromApi(forceRefresh: boolean = false): Promise<VehicleWashProvider[]> {
   const cacheKey = 'all_wash_providers';
   const cached = memoryCache.providers[cacheKey];
-  if (!forceRefresh && cached && (Date.now() - cached.timestamp < CATALOG_CACHE_TTL)) {
+  const LIVE_PROVIDERS_CACHE_TTL = 30 * 1000; // 30 seconds fresh cache for live provider availability
+  if (!forceRefresh && cached && (Date.now() - cached.timestamp < LIVE_PROVIDERS_CACHE_TTL)) {
     return cached.data;
   }
 
@@ -1279,6 +1280,11 @@ export async function fetchVehicleWashProvidersFromApi(forceRefresh: boolean = f
           // Only include verified provider accounts
           if (!provId) return;
 
+          // Strictly exclude offline providers during live service booking
+          if (item.provider_is_active !== undefined && (item.provider_is_active === 0 || item.provider_is_active === '0' || item.provider_is_active === false)) {
+            return;
+          }
+
           const businessName = item.business_name || (provId === 28 ? 'Raj Jana' : `Service Provider #${provId}`);
           const provAddress = item.provider_address || 'Rajarhat Gopalpur, Bidhannagar, Greater Kolkata, 700157';
           const provPhone = item.provider_phone || '+91 96474 14029';
@@ -1291,7 +1297,7 @@ export async function fetchVehicleWashProvidersFromApi(forceRefresh: boolean = f
               rating: parseFloat(item.provider_rating || '4.8'),
               distanceKm: '1.2 km',
               address: provAddress,
-              available: true,
+              available: item.provider_is_active !== undefined ? (item.provider_is_active == 1) : true,
               phone: provPhone,
               avatar: businessName.split(' ').map((w: string) => w.charAt(0)).join('').substring(0, 2).toUpperCase() || 'RJ',
               services: [item],

@@ -343,6 +343,8 @@ export const VehicleCarBikeWash: React.FC<VehicleCarBikeWashProps> = ({
   const activeProviders = useMemo(() => {
     const isBike = vehicleType === 'Bike' || vehicleType === 'Scooter';
     return providers.filter(prov => {
+      // Strictly exclude offline providers during live service booking
+      if (prov.available === false) return false;
       if (!prov.services || prov.services.length === 0) return true;
       return prov.services.some((srv: any) => {
         const subId = parseInt(srv.subcategory_id || '0');

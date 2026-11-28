@@ -388,7 +388,15 @@ export async function fetchServicesFromApi(params?: {
     if (res.ok) {
       const json = await res.json();
       if (json.success && Array.isArray(json.data) && json.data.length > 0) {
-        const mappedServices = json.data.map((s: any) => {
+        // Strictly exclude services from offline providers during live browsing / booking
+        const activeItems = json.data.filter((s: any) => {
+          if (s.provider_is_active !== undefined && (s.provider_is_active === 0 || s.provider_is_active === '0' || s.provider_is_active === false)) {
+            return false;
+          }
+          return true;
+        });
+
+        const mappedServices = activeItems.map((s: any) => {
           const catId = Number(s.category_id);
           const rawSlug = (s.category_slug || '').toLowerCase();
           const subSlug = (s.subcategory_slug || '').toLowerCase();
@@ -1263,7 +1271,7 @@ export async function saveProfileAddressApi(userId: number, address: {
 export async function fetchVehicleWashProvidersFromApi(forceRefresh: boolean = false): Promise<VehicleWashProvider[]> {
   const cacheKey = 'all_wash_providers';
   const cached = memoryCache.providers[cacheKey];
-  const LIVE_PROVIDERS_CACHE_TTL = 30 * 1000; // 30 seconds fresh cache for live provider availability
+  const LIVE_PROVIDERS_CACHE_TTL = 10 * 1000; // 10 seconds fresh cache for live provider availability
   if (!forceRefresh && cached && (Date.now() - cached.timestamp < LIVE_PROVIDERS_CACHE_TTL)) {
     return cached.data;
   }
@@ -1272,7 +1280,7 @@ export async function fetchVehicleWashProvidersFromApi(forceRefresh: boolean = f
     const res = await fetch(`${API_BASE_URL}/services.php?category_id=1&limit=30`);
     if (res.ok) {
       const json = await res.json();
-      if (json.success && Array.isArray(json.data) && json.data.length > 0) {
+      if (json.success && Array.isArray(json.data)) {
         const provMap = new Map<number, VehicleWashProvider>();
 
         json.data.forEach((item: any) => {
@@ -1280,8 +1288,8 @@ export async function fetchVehicleWashProvidersFromApi(forceRefresh: boolean = f
           // Only include verified provider accounts
           if (!provId) return;
 
-          // Strictly exclude offline providers during live service booking
-          if (item.provider_is_active !== undefined && (item.provider_is_active === 0 || item.provider_is_active === '0' || item.provider_is_active === false)) {
+          // Strictly exclude offline providers during live service booking (must be active = 1)
+          if (item.provider_is_active !== undefined && (item.provider_is_active === 0 || item.provider_is_active === '0' || item.provider_is_active === false || item.provider_is_active === null)) {
             return;
           }
 
@@ -1297,7 +1305,7 @@ export async function fetchVehicleWashProvidersFromApi(forceRefresh: boolean = f
               rating: parseFloat(item.provider_rating || '4.8'),
               distanceKm: '1.2 km',
               address: provAddress,
-              available: item.provider_is_active !== undefined ? (item.provider_is_active == 1) : true,
+              available: true,
               phone: provPhone,
               avatar: businessName.split(' ').map((w: string) => w.charAt(0)).join('').substring(0, 2).toUpperCase() || 'RJ',
               services: [item],
@@ -1309,10 +1317,9 @@ export async function fetchVehicleWashProvidersFromApi(forceRefresh: boolean = f
         });
 
         const list = Array.from(provMap.values());
-        if (list.length > 0) {
-          memoryCache.providers[cacheKey] = { data: list, timestamp: Date.now() };
-          return list;
-        }
+        // Cache and return the real live list (empty array when all providers are offline)
+        memoryCache.providers[cacheKey] = { data: list, timestamp: Date.now() };
+        return list;
       }
     }
   } catch (e) {
@@ -1323,21 +1330,7 @@ export async function fetchVehicleWashProvidersFromApi(forceRefresh: boolean = f
     return cached.data;
   }
 
-  // Graceful database fallback matching Raj Jana (Provider 28)
-  return [
-    {
-      id: 28,
-      serviceId: 19,
-      businessName: 'Raj Jana',
-      rating: 4.8,
-      distanceKm: '1.2 km',
-      address: 'Rajarhat Gopalpur, Bidhannagar, Greater Kolkata, 700157',
-      available: true,
-      phone: '+91 96474 14029',
-      avatar: 'RJ',
-      services: [],
-    },
-  ];
+  return [];
 }
 
 export function getPlansForProvider(provider: VehicleWashProvider | null, vehicleType?: string): VehicleWashPackage[] {

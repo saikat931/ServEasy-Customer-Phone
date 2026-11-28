@@ -298,12 +298,23 @@ export const VehicleCarBikeWash: React.FC<VehicleCarBikeWashProps> = ({
         }
       }
 
-      const provs = await fetchVehicleWashProvidersFromApi();
+      const provs = await fetchVehicleWashProvidersFromApi(true);
       setProviders(provs);
       setLoadingProviders(false);
     }
     loadData();
   }, [currentUser?.id, currentUser?.isLoggedIn]);
+
+  // Whenever user arrives at Step 3 (Provider selection), re-verify live online/offline provider status
+  useEffect(() => {
+    if (currentStep === 3) {
+      setLoadingProviders(true);
+      fetchVehicleWashProvidersFromApi(true).then(provs => {
+        setProviders(provs);
+        setLoadingProviders(false);
+      }).catch(() => setLoadingProviders(false));
+    }
+  }, [currentStep]);
 
   // Keep vehicleType synchronized if initialVehicleType changes from parent
   useEffect(() => {
@@ -650,6 +661,16 @@ export const VehicleCarBikeWash: React.FC<VehicleCarBikeWashProps> = ({
         } catch (e) {
           console.log('[Address Save] Error:', e);
         }
+      }
+    }
+
+    if (currentStep === 3) {
+      if (!selectedProvider || activeProviders.length === 0) {
+        Alert.alert(
+          'Provider Offline',
+          'There are currently no active service providers online for this service. Please wait until a provider goes online or check back soon.'
+        );
+        return;
       }
     }
 
@@ -1431,12 +1452,12 @@ export const VehicleCarBikeWash: React.FC<VehicleCarBikeWashProps> = ({
               <ActivityIndicator size="large" color="#30D158" style={{ marginTop: 40 }} />
             ) : activeProviders.length === 0 ? (
               <View style={{ padding: 30, alignItems: 'center' }}>
-                <MaterialCommunityIcons name="car-wash" size={40} color="#30D158" />
+                <MaterialCommunityIcons name="clock-alert-outline" size={44} color="#FF9F0A" />
                 <Text style={{ color: activeTheme.textPrimary, fontWeight: '700', marginTop: 12, fontSize: 16 }}>
-                  No Active Providers
+                  No Providers Online
                 </Text>
-                <Text style={{ color: activeTheme.textSecondary, textAlign: 'center', marginTop: 6, fontSize: 13 }}>
-                  No verified service providers currently offer {vehicleType} wash in this region.
+                <Text style={{ color: activeTheme.textSecondary, textAlign: 'center', marginTop: 6, fontSize: 13, lineHeight: 18 }}>
+                  All verified service providers for {vehicleType} wash are currently offline or off-duty. Please check back shortly when providers go online.
                 </Text>
               </View>
             ) : (

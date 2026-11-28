@@ -76,7 +76,6 @@ export const Splash: React.FC<SplashProps> = ({ onAnimationEnd }) => {
               <Image source={require('../../assets/logo.png')} style={styles.splashLogoImage} />
             </View>
             <Text style={styles.logoTitle}>ServEasy</Text>
-            <Text style={styles.logoSubtitle}>SERVICE PROVIDER</Text>
           </View>
         ) : (
           <BlurView intensity={15} tint="dark" style={styles.logoGlassCard}>
@@ -84,7 +83,6 @@ export const Splash: React.FC<SplashProps> = ({ onAnimationEnd }) => {
               <Image source={require('../../assets/logo.png')} style={styles.splashLogoImage} />
             </View>
             <Text style={styles.logoTitle}>ServEasy</Text>
-            <Text style={styles.logoSubtitle}>SERVICE PROVIDER</Text>
           </BlurView>
         )}
       </Animated.View>

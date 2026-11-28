@@ -161,7 +161,7 @@ export const VehicleCarBikeWash: React.FC<VehicleCarBikeWashProps> = ({
 
   // Hook provider availability for single person service provider slot blocking
   useEffect(() => {
-    const provId = selectedProvider?.id || 28;
+    const provId = selectedProvider?.id;
     if (provId && scheduleDate) {
       fetchProviderAvailabilityApi(provId, scheduleDate)
         .then(avail => {
@@ -374,9 +374,7 @@ export const VehicleCarBikeWash: React.FC<VehicleCarBikeWashProps> = ({
   useEffect(() => {
     if (activeProviders.length > 0) {
       if (!selectedProvider || !activeProviders.some(p => p.id === selectedProvider.id)) {
-        const preferred = (vehicleType === 'Bike' || vehicleType === 'Scooter')
-          ? (activeProviders.find(p => p.id === 28) || activeProviders[0])
-          : activeProviders[0];
+        const preferred = activeProviders[0];
         setSelectedProvider(preferred);
       }
     } else {
@@ -738,14 +736,14 @@ export const VehicleCarBikeWash: React.FC<VehicleCarBikeWashProps> = ({
       }
       setIsSubmitting(true);
       const payload: VehicleWashBookingPayload = {
-        serviceId: selectedProvider?.serviceId || (selectedProvider?.id === 28 ? 19 : 2),
+        serviceId: selectedProvider?.serviceId || 2,
         vehicleType,
         locationOption,
         address: customAddress,
         landmark,
         pincode,
-        providerId: selectedProvider?.id || 28,
-        providerName: selectedProvider?.businessName || 'Apex Auto Detailing',
+        providerId: selectedProvider?.id || 0,
+        providerName: selectedProvider?.businessName || 'Service Provider',
         packageId: selectedPackage?.id || null,
         packageName: selectedPackage?.name || 'Vehicle Wash',
         packagePrice,

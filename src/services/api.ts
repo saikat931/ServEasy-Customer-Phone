@@ -1293,7 +1293,7 @@ export async function fetchVehicleWashProvidersFromApi(forceRefresh: boolean = f
             return;
           }
 
-          const businessName = item.business_name || (provId === 28 ? 'Raj Jana' : `Service Provider #${provId}`);
+          const businessName = item.business_name || (item.full_name || `Service Provider #${provId}`);
           const provAddress = item.provider_address || 'Rajarhat Gopalpur, Bidhannagar, Greater Kolkata, 700157';
           const provPhone = item.provider_phone || '+91 96474 14029';
 
